@@ -1,0 +1,95 @@
+---
+title: "Aliases"
+description: "Create short names for tool versions and redirect tool backends using aliases in mise.toml."
+---
+
+Mise supports two kinds of aliases: **backend aliases**, which redirect a tool name to a different backend, and **version aliases**, which give friendly names to specific versions.
+
+<Note>
+  The `[alias]` key has been renamed to `[tool_alias]` to distinguish it from `[shell_alias]`. The old `[alias]` key still works but is deprecated. For shell command aliases like `alias ll='ls -la'`, see [Shell aliases](/configuration/overview).
+</Note>
+
+## Backend aliases
+
+Backend aliases let you redirect a tool name to a different backend. For example, you can change `node` from its default `core:node` to a custom asdf plugin:
+
+```toml ~/.config/mise/config.toml
+[tool_alias]
+node = 'asdf:company/our-custom-node'
+erlang = 'asdf:https://github.com/company/our-custom-erlang'
+```
+
+After adding this, running `mise use node@20` will use your custom backend instead of the built-in core backend.
+
+This is useful when:
+- Your organization maintains a fork of a tool plugin
+- You need to pin a specific backend for compliance or reproducibility reasons
+- You want to use a private plugin for a commonly named tool
+
+## Version aliases
+
+Version aliases let you assign friendly names to specific versions. One common use case is defining aliases for LTS versions:
+
+```toml ~/.config/mise/config.toml
+[tool_alias.node.versions]
+my_custom_20 = '20'
+```
+
+After adding this, you can use the alias in any config file:
+
+```toml mise.toml
+[tools]
+node = "my_custom_20"
+```
+
+This makes it easier to update multiple projects at once — change the alias definition once in your global config, and all projects that reference it pick up the update.
+
+## Plugin-provided aliases
+
+Plugins can supply their own version aliases via a `bin/list-aliases` script. Here is an example showing Node.js LTS aliases:
+
+```bash bin/list-aliases
+#!/usr/bin/env bash
+
+echo "lts-hydrogen 18"
+echo "lts-gallium 16"
+echo "lts-fermium 14"
+```
+
+Each line contains the alias name and the version it maps to, separated by a space. Plugin-provided aliases work the same way as user-defined aliases: you can reference them anywhere you specify a version.
+
+<Info>
+  Plugin-provided aliases are mise-specific and don't affect asdf. Plugin authors can add this script without impacting asdf users.
+</Info>
+
+## Template aliases
+
+Alias values support [Tera templates](/configuration/templates), which means you can use dynamic expressions:
+
+```toml ~/.config/mise/config.toml
+[tool_alias.node.versions]
+current = "{{exec(command='node --version')}}"
+```
+
+This resolves the alias to whatever `node --version` returns at the time mise evaluates the config.
+
+## Global vs project aliases
+
+**Global aliases** go in `~/.config/mise/config.toml` and apply across all your projects:
+
+```toml ~/.config/mise/config.toml
+[tool_alias.node.versions]
+lts = "22"
+```
+
+**Project aliases** can also be defined in a project's `mise.toml`. They take precedence over global aliases for that project:
+
+```toml mise.toml
+[tool_alias.node.versions]
+project-node = "20.11.0"
+
+[tools]
+node = "project-node"
+```
+
+This lets teams pin a canonical version name in the project config without hardcoding a version number in every place the tool is referenced.

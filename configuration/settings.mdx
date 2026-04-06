@@ -1,0 +1,95 @@
+---
+title: "Settings"
+description: "Global settings for mise, configurable via mise.toml, environment variables, or the mise settings command."
+---
+
+Mise settings control global behavior. You can configure them in three ways:
+
+```bash
+# Via CLI
+mise settings set jobs 8
+
+# Via environment variable
+MISE_JOBS=8 mise install
+
+# Via ~/.config/mise/config.toml
+```
+
+```toml ~/.config/mise/config.toml
+[settings]
+jobs = 8
+```
+
+## Viewing settings
+
+```bash
+mise settings          # list all settings and values
+mise settings get jobs # get a specific setting
+mise settings set jobs 8
+mise settings unset jobs
+```
+
+## Key settings reference
+
+### Tool installation
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `jobs` | `MISE_JOBS` | `4` | Number of tools to install in parallel |
+| `auto_install` | `MISE_AUTO_INSTALL` | `true` | Automatically install missing tools |
+| `always_keep_download` | `MISE_ALWAYS_KEEP_DOWNLOAD` | `false` | Keep downloaded tool archives after install |
+| `always_keep_install` | `MISE_ALWAYS_KEEP_INSTALL` | `false` | Keep install directory even on failed installs |
+| `raw` | `MISE_RAW` | `false` | Connect stdin/stdout/stderr directly to tool processes |
+
+### Behavior
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `verbose` | `MISE_VERBOSE` | `false` | Show extra output |
+| `quiet` | `MISE_QUIET` | `false` | Suppress non-error output |
+| `color` | `MISE_COLOR` | `true` | Use colored output |
+| `yes` | `MISE_YES` | `false` | Auto-confirm all prompts |
+| `not_found_auto_install` | `MISE_NOT_FOUND_AUTO_INSTALL` | `true` | Install tools when a command is not found |
+
+### Caching
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `cache_prune_age` | `MISE_CACHE_PRUNE_AGE` | `30d` | Delete cache files older than this duration |
+| `fetch_remote_versions_cache` | `MISE_FETCH_REMOTE_VERSIONS_CACHE` | `1h` | How long to cache remote version lists |
+
+### Security
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `paranoid` | `MISE_PARANOID` | `false` | Enable extra security checks (checksum verification) |
+| `trusted_config_paths` | `MISE_TRUSTED_CONFIG_PATHS` | `[]` | Paths to trust without prompting |
+
+### Shell & PATH
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `shims_dir` | `MISE_SHIMS_DIR` | `~/.local/share/mise/shims` | Directory for shims |
+| `data_dir` | `MISE_DATA_DIR` | `~/.local/share/mise` | Directory for mise data |
+| `cache_dir` | `MISE_CACHE_DIR` | `~/.cache/mise` | Directory for mise cache |
+
+### Task runner
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `task_output` | `MISE_TASK_OUTPUT` | `prefix` | Task output mode: `prefix`, `interleave`, `quiet` |
+
+## Example: common configuration
+
+```toml ~/.config/mise/config.toml
+[settings]
+jobs = 8
+auto_install = true
+verbose = false
+paranoid = true
+trusted_config_paths = ["/home/me/work"]
+```
+
+<Tip>
+Run `mise settings` to see the full list of available settings with their current values and descriptions.
+</Tip>

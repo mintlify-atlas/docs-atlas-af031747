@@ -1,0 +1,76 @@
+---
+title: "mise upgrade"
+description: "Upgrade installed tools to newer versions within the range specified in mise.toml."
+sidebarTitle: "upgrade"
+---
+
+**Usage:** `mise upgrade [FLAGS] [TOOL@VERSION]…`
+
+**Alias:** `up`
+
+Upgrade installed tools to newer versions. By default, stays within the version range specified in `mise.toml` (e.g., `node = "22"` upgrades to the latest `22.x.x`). Use `--bump` to upgrade to the latest available version and update `mise.toml`.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[TOOL@VERSION]…` | Tools to upgrade (upgrades all if omitted) |
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-i, --interactive` | Show a multiselect menu to choose which tools to upgrade |
+| `-j, --jobs <JOBS>` | Number of parallel jobs (default: 4) |
+| `-l, --bump` | Upgrade to latest available version and update `mise.toml` |
+| `-n, --dry-run` | Print what would be done without doing it |
+| `--dry-run-code` | Like `--dry-run` but exits with code 1 if there are outdated tools |
+| `-x, --exclude… <TOOL>` | Exclude specific tools from upgrading |
+| `--before <DATE>` | Only upgrade to versions released before this date (e.g. `2024-06-01` or `90d`) |
+| `--local` | Only upgrade tools defined in local (project) config, skip global config |
+| `--raw` | Pipe stdin/stdout/stderr directly to tool processes; sets `--jobs=1` |
+
+## Examples
+
+```bash
+# Upgrade node within the range in mise.toml
+mise upgrade node
+
+# Upgrade node to latest and bump mise.toml
+mise upgrade node --bump
+
+# Upgrade all tools
+mise upgrade
+
+# Upgrade all tools and bump versions in mise.toml
+mise upgrade --bump
+
+# Preview what would be upgraded
+mise upgrade --dry-run
+
+# Upgrade node and python
+mise upgrade node python
+
+# Upgrade all except go
+mise upgrade --exclude go
+
+# Interactive upgrade with menu
+mise upgrade --interactive
+
+# Only upgrade project-local tools
+mise upgrade --local
+```
+
+## Version bumping
+
+When using `--bump`, mise preserves the same precision as what's in `mise.toml`:
+
+| `mise.toml` before | Latest available | `mise.toml` after (`--bump`) |
+|--------------------|-----------------|------------------------------|
+| `node = "20"` | 22.1.0 | `node = "22"` |
+| `node = "20.0.0"` | 22.1.0 | `node = "22.1.0"` |
+| `node = "20.0"` | 22.1.0 | `node = "22.1"` |
+
+<Tip>
+Use `mise ls --outdated` to see which tools have newer versions available before running upgrade.
+</Tip>

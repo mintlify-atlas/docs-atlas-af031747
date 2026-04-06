@@ -1,0 +1,67 @@
+---
+title: "mise exec"
+description: "Execute a command with mise-managed tools active, without modifying the current shell session."
+sidebarTitle: "exec"
+---
+
+**Usage:** `mise exec [FLAGS] [TOOL@VERSION]… [-- COMMAND]…`
+
+**Alias:** `x`
+
+Execute a command with specified tool versions active. Use this to run one-off commands without permanently activating tools in your shell or modifying `mise.toml`.
+
+Tools from `mise.toml` are loaded automatically, but you can override specific tools with the `TOOL@VERSION` arguments.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[TOOL@VERSION]…` | Tools to activate, e.g. `node@22 python@3.12` |
+| `[-- COMMAND]…` | Command to run |
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-c, --command <C>` | Command string to execute (alternative to `-- COMMAND`) |
+| `-j, --jobs <JOBS>` | Number of jobs to run in parallel (default: 4) |
+| `--raw` | Pipe stdin/stdout/stderr directly to tool process; sets `--jobs=1` |
+| `--fresh-env` | Bypass environment cache and recompute |
+| `--no-prepare` | Skip automatic dependency preparation |
+
+### Sandboxing (experimental)
+
+| Flag | Description |
+|------|-------------|
+| `--deny-all` | Block reads, writes, network, and env vars |
+| `--deny-env` | Block env var inheritance (only PATH, HOME, USER, SHELL, TERM, LANG pass through) |
+| `--deny-net` | Block all network access |
+| `--deny-read` | Block filesystem reads (system libs and tool dirs still accessible) |
+| `--deny-write` | Block all filesystem writes |
+| `--allow-env… <VAR>` | Allow specific env var (implies `--deny-env` for everything else) |
+| `--allow-net… <HOST>` | Allow network to specific host (implies `--deny-net` for everything else) |
+| `--allow-read… <PATH>` | Allow reads from specific path (implies `--deny-read` for everything else) |
+| `--allow-write… <PATH>` | Allow writes to specific path (implies `--deny-write` for everything else) |
+
+## Examples
+
+```bash
+# Run a script with node@22
+mise exec node@22 -- node ./app.js
+
+# Shorter alias
+mise x node@22 -- node ./app.js
+
+# Multiple tools
+mise exec node@22 python@3.12 -- node ./app.js
+
+# Command as string
+mise exec node@22 python@3.12 --command "node -v && python -V"
+
+# Run in a different directory
+mise x -C /path/to/project node@22 -- node ./app.js
+```
+
+<Tip>
+If you have `mise activate` in your shell's rc file, tools are already active for interactive use. Use `mise exec` for scripts, CI, or one-off commands where you want explicit tool versions without changing the shell environment.
+</Tip>

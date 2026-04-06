@@ -1,0 +1,86 @@
+---
+title: "mise activate"
+description: "Initialize mise in your current shell session by adding it to your shell's rc file."
+---
+
+## Synopsis
+
+```sh
+mise activate [FLAGS] [SHELL_TYPE]
+```
+
+Initializes mise in the current shell session.
+
+Add this to your shell's rc file (e.g., `~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, or `$PROFILE` for PowerShell) so it takes effect for every new session. Without this, activation only applies to the current session.
+
+Mise works by updating your `PATH` and environment variables each time your prompt runs. Use [`--shims`](#--shims) instead for non-interactive setups like CI/CD or IDEs.
+
+<Note>
+  Customize the status output shown when changing directories using `status` settings.
+</Note>
+
+## Shell type
+
+The shell to generate the activation script for. If omitted, mise will attempt to detect your shell automatically.
+
+| Value | Shell |
+| --- | --- |
+| `bash` | Bash |
+| `zsh` | Zsh |
+| `fish` | Fish |
+| `nu` | Nushell |
+| `xonsh` | Xonsh |
+| `elvish` | Elvish |
+| `pwsh` | PowerShell |
+
+## Flags
+
+| Flag | Description |
+| --- | --- |
+| `-q, --quiet` | Suppress non-error messages. |
+| `--no-hook-env` | Do not automatically call `hook-env`. Useful for debugging — run `eval "$(mise activate --no-hook-env)"` then call `mise hook-env` manually to inspect output without modifying your environment. |
+| `--shims` | Use shims instead of modifying `PATH`. Equivalent to prepending `$HOME/.local/share/mise/shims` to `PATH`. Does not support all features of `mise activate`. See [shims vs PATH](/dev-tools/shims) for details. |
+
+## Examples
+
+<Tabs>
+  <Tab title="bash">
+    ```sh
+    eval "$(mise activate bash)"
+    ```
+  </Tab>
+  <Tab title="zsh">
+    ```sh
+    eval "$(mise activate zsh)"
+    ```
+  </Tab>
+  <Tab title="fish">
+    ```sh
+    mise activate fish | source
+    ```
+  </Tab>
+  <Tab title="xonsh">
+    ```sh
+    execx($(mise activate xonsh))
+    ```
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    (&mise activate pwsh) | Out-String | Invoke-Expression
+    ```
+  </Tab>
+</Tabs>
+
+### Adding to your rc file
+
+If `mise` is already on your `PATH`:
+
+```sh
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+```
+
+If `mise` is not yet on your `PATH`, specify the full path:
+
+```sh
+echo 'eval "$(/path/to/mise activate zsh)"' >> ~/.zshrc
+```

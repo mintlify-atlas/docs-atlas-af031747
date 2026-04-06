@@ -1,97 +1,110 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Mise — The Front-End to Your Dev Env"
+description: "Manage dev tool versions, environment variables, and project tasks from a single unified configuration."
 ---
 
-## Setting up
+Mise (mise-en-place) is an all-in-one developer environment manager. It replaces version managers like `nvm`, `pyenv`, and `rbenv`; environment tools like `direnv`; and task runners like `make` — all with a single, fast Rust binary.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/getting-started">
+    Install mise and set up your first project in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Dev Tools" icon="wrench" href="/dev-tools/overview">
+    Manage Node, Python, Go, Ruby, and hundreds of other tools.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Environments" icon="leaf" href="/environments/overview">
+    Manage per-project environment variables with automatic loading.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Tasks" icon="list-check" href="/tasks/overview">
+    Define and run project tasks with dependency resolution and parallel execution.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What mise does
 
-Everything you need to create world-class documentation.
+<CardGroup cols={3}>
+  <Card title="Tool Version Manager" icon="code-branch">
+    Like asdf — manage multiple versions of Node, Python, Go, Ruby, and [hundreds more](/dev-tools/overview).
+  </Card>
+  <Card title="Environment Manager" icon="gear">
+    Like direnv — automatically load environment variables when you enter a project directory.
+  </Card>
+  <Card title="Task Runner" icon="play">
+    Like make — define tasks in `mise.toml` or as shell scripts, with parallel builds and file watching.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Quick example
 
-## Need inspiration?
+```toml mise.toml
+[tools]
+node = "22"
+python = "3.12"
+go = "1.22"
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+[env]
+NODE_ENV = "development"
+DATABASE_URL = "postgres://localhost/myapp"
+
+[tasks.build]
+run = "cargo build"
+
+[tasks.test]
+run = "cargo test"
+depends = ["build"]
+```
+
+With this single file, mise will:
+- Install and activate the right versions of Node, Python, and Go
+- Set your environment variables when you enter the directory
+- Provide `mise run build` and `mise run test` commands with dependency ordering
+
+## Get started
+
+<Steps>
+  <Step title="Install mise">
+    ```bash
+    curl https://mise.run | sh
+    ```
+  </Step>
+  <Step title="Activate in your shell">
+    ```bash
+    # Add to ~/.zshrc, ~/.bashrc, or ~/.config/fish/config.fish
+    eval "$(~/.local/bin/mise activate zsh)"
+    ```
+  </Step>
+  <Step title="Add tools to your project">
+    ```bash
+    mise use node@22 python@3.12
+    ```
+  </Step>
+  <Step title="Run your tasks">
+    ```bash
+    mise run build
+    mise run test
+    ```
+  </Step>
+</Steps>
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Installing mise" icon="download" href="/installing-mise">
+    All installation methods: brew, apt, dnf, cargo, and more.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/overview">
+    Learn how `mise.toml` files work and how configuration is layered.
+  </Card>
+  <Card title="Backends" icon="database" href="/dev-tools/backends">
+    Aqua, asdf, cargo, npm, GitHub releases, and more.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/use">
+    Full reference for every mise command and flag.
+  </Card>
+  <Card title="Secrets" icon="lock" href="/environments/secrets">
+    Integrate with 1Password, Vault, and other secret providers.
+  </Card>
+  <Card title="Continuous Integration" icon="circle-check" href="/guides/continuous-integration">
+    Use mise in GitHub Actions, GitLab CI, and other CI systems.
+  </Card>
+</CardGroup>

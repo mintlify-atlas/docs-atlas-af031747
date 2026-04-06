@@ -1,0 +1,200 @@
+---
+title: "Getting started"
+description: "Install mise, activate your shell, and start managing tools, environment variables, and tasks."
+---
+
+## Install and activate mise
+
+<Steps>
+  <Step title="Install mise">
+    The fastest way to install mise on Linux or macOS is with the install script:
+
+    ```sh
+    curl https://mise.run | sh
+    ```
+
+    By default, mise installs to `~/.local/bin`. Verify the installation:
+
+    ```sh
+    ~/.local/bin/mise --version
+    # mise 2024.x.x
+    ```
+
+    For other platforms and package managers, see [Installing mise](/installing-mise).
+  </Step>
+
+  <Step title="Activate mise in your shell">
+    Add the activation line to your shell's config file, then restart your shell session:
+
+    <Tabs>
+      <Tab title="bash">
+        ```sh
+        echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+        ```
+      </Tab>
+      <Tab title="zsh">
+        ```sh
+        echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+        ```
+      </Tab>
+      <Tab title="fish">
+        ```sh
+        echo '~/.local/bin/mise activate fish | source' >> ~/.config/fish/config.fish
+        ```
+      </Tab>
+      <Tab title="PowerShell">
+        ```powershell
+        (&mise activate pwsh) | Out-String | Invoke-Expression
+        ```
+
+        Add the line above to your PowerShell profile (`$PROFILE`).
+      </Tab>
+    </Tabs>
+
+    After restarting your shell, run `mise doctor` to verify the setup:
+
+    ```sh
+    mise doctor
+    ```
+
+    <Tip>
+      `mise activate` updates your `PATH` and environment every time your prompt runs. This is the recommended approach for interactive shells. Alternatively, use [shims](/dev-tools/shims) for CI/CD, IDEs, and scripts.
+    </Tip>
+  </Step>
+
+  <Step title="Install and use tools">
+    Install a tool at a specific version and set it as your global default:
+
+    ```sh
+    mise use --global node@24
+    node -v
+    # v24.x.x
+    ```
+
+    For a one-off command without installing permanently, use `mise exec`:
+
+    ```sh
+    mise exec node@24 -- node -v
+    # mise node@24.x.x ✓ installed
+    # v24.x.x
+    ```
+
+    Running `mise use --global node@24` updates your global config:
+
+    ```toml ~/.config/mise/config.toml
+    [tools]
+    node = "24"
+    ```
+  </Step>
+
+  <Step title="Set environment variables">
+    Define environment variables in a project's `mise.toml`. They load automatically when mise is activated:
+
+    ```toml mise.toml
+    [env]
+    NODE_ENV = "production"
+    ```
+
+    ```sh
+    echo "node env: $NODE_ENV"
+    # node env: production
+    ```
+  </Step>
+
+  <Step title="Run tasks">
+    Define tasks in `mise.toml` and run them with `mise run`:
+
+    ```toml mise.toml
+    [tasks]
+    hello = "echo hello from mise"
+    ```
+
+    ```sh
+    mise run hello
+    # hello from mise
+    ```
+
+    <Tip>
+      Mise automatically installs all tools from `mise.toml` before running a task.
+    </Tip>
+  </Step>
+</Steps>
+
+## Using backends
+
+Mise can install tools from multiple package ecosystems. Use `mise use` with the backend prefix:
+
+```sh
+# Install claude-code from npm
+mise use --global npm:@anthropic-ai/claude-code
+claude --version
+
+# Install black from PyPI via pipx
+mise use --global pipx:black
+black --version
+
+# Install ripgrep from GitHub releases
+mise use --global github:BurntSushi/ripgrep
+rg --version
+```
+
+After running all three, your config will include:
+
+```toml ~/.config/mise/config.toml
+[tools]
+"npm:@anthropic-ai/claude-code" = "latest"
+"pipx:black" = "latest"
+"github:BurntSushi/ripgrep" = "latest"
+```
+
+See [backends](/dev-tools/backends) for all supported ecosystems.
+
+## Trusting config files
+
+When you or a teammate adds a `mise.toml` to a project, mise prompts you to trust it before loading any env directives or hooks:
+
+```
+mise ~/my-project/mise.toml is not trusted. Trust it? [y/n]
+```
+
+To trust the file, run:
+
+```sh
+mise trust
+```
+
+<Note>
+  This is a security measure — config files can execute arbitrary code via `[env]` directives, hooks, and tasks. `mise use` automatically trusts the file it creates, so you will only see this prompt when pulling a config someone else wrote or editing `mise.toml` by hand.
+</Note>
+
+## Shell feature compatibility
+
+Not all shells support every mise feature:
+
+| Feature | Bash | Zsh | Fish | Nushell | Elvish | Xonsh | PowerShell |
+| ------- | ---- | --- | ---- | ------- | ------ | ----- | ---------- |
+| `mise activate` | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `mise shell` | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Shell aliases (`[shell_alias]`) | Yes | Yes | Yes | No | No | Yes | No |
+| `chpwd` hook | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installing mise" icon="download" href="/installing-mise">
+    All installation methods: brew, apt, dnf, cargo, winget, and more.
+  </Card>
+  <Card title="Dev tools" icon="wrench" href="/dev-tools/overview">
+    Manage hundreds of tools across multiple backends.
+  </Card>
+  <Card title="Environments" icon="leaf" href="/environments/overview">
+    Load `.env` files and manage per-project environment variables.
+  </Card>
+  <Card title="Tasks" icon="list-check" href="/tasks/overview">
+    Define tasks with dependencies, file watching, and parallel execution.
+  </Card>
+</CardGroup>
+
+<Warning>
+  Many tools in mise require the GitHub API. Unauthenticated requests can be rate limited — if you see 4xx errors, see [GitHub API rate limits](/guides/troubleshooting#github-api-rate-limits) for how to configure authentication.
+</Warning>

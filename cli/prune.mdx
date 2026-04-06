@@ -1,0 +1,60 @@
+---
+title: "mise prune"
+description: "Remove unused tool versions to free up disk space."
+sidebarTitle: "prune"
+---
+
+**Usage:** `mise prune [FLAGS] [TOOL]…`
+
+Delete tool versions that are no longer referenced by any active `mise.toml` config file. Mise tracks which config files it has used in `~/.local/state/mise/tracked-configs`.
+
+Versions installed only via environment variables (`MISE_<PLUGIN>_VERSION`) or command-line overrides (`mise exec <tool>@<version>`) are also considered prunable.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[TOOL]…` | Prune only these specific tools |
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-n, --dry-run` | Show what would be removed without deleting anything |
+| `--dry-run-code` | Like `--dry-run` but exits with code 1 if there are tools to prune |
+| `--configs` | Prune only tracked config links pointing to non-existent files |
+| `--tools` | Prune only unused tool versions |
+
+## Examples
+
+```bash
+# Preview what would be removed
+mise prune --dry-run
+
+# Remove all unused versions
+mise prune
+
+# Prune only node versions
+mise prune node
+
+# Check in scripts (exits 1 if prunable tools exist)
+mise prune --dry-run-code && echo "Nothing to prune"
+```
+
+```
+$ mise prune --dry-run
+rm -rf ~/.local/share/mise/versions/node/20.0.0
+rm -rf ~/.local/share/mise/versions/node/20.0.1
+```
+
+## Listing prunable tools
+
+Before pruning, you can see what would be removed:
+
+```bash
+mise ls --prunable
+```
+
+<Tip>
+Run `mise prune --dry-run` first to verify what will be removed before actually deleting anything.
+</Tip>

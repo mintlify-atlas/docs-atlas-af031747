@@ -1,0 +1,140 @@
+---
+title: "Templates"
+description: "Use Tera templates in mise.toml to dynamically generate configuration values."
+---
+
+Mise uses the [Tera](https://keats.github.io/tera/) template engine to allow dynamic values in `mise.toml` configuration files. Templates let you reference environment variables, run shell commands, inspect the system, and more.
+
+## Where templates are supported
+
+Templates work in most `mise.toml` string values, including:
+
+- `[env]` values
+- `[tools]` version strings
+- `[tasks]` run scripts
+- `.tool-versions` files
+
+<Note>
+The `mise.toml` file itself must be valid TOML — only string values inside it are templated.
+</Note>
+
+## Template syntax
+
+Tera uses three delimiter types:
+
+| Syntax | Purpose |
+|--------|---------|
+| `{{ ... }}` | Expressions — output a value |
+| `{% ... %}` | Statements — control flow |
+| `{# ... #}` | Comments |
+
+## Built-in variables
+
+### `env`
+
+Access environment variables:
+
+```toml mise.toml
+[env]
+HOME_BIN = "{{ env.HOME }}/bin"
+NODE_VERSION = "{{ get_env(name='NODE_VERSION', default='22') }}"
+```
+
+### `cwd`
+
+The current working directory:
+
+```toml mise.toml
+[env]
+PROJECT_NAME = "{{ cwd | basename }}"
+```
+
+## Built-in functions
+
+### `get_env(name, default)`
+
+Read an environment variable with an optional default:
+
+```toml mise.toml
+[tools]
+node = "{{ get_env(name='NODE_VERSION', default='22') }}"
+```
+
+### `exec(command)`
+
+Run a shell command and use its output:
+
+```toml mise.toml
+[env]
+GIT_BRANCH = "{{ exec(command='git rev-parse --abbrev-ref HEAD') }}"
+```
+
+### `arch()`
+
+Returns the system architecture (`x86_64`, `aarch64`, etc.):
+
+```toml mise.toml
+[env]
+ARCH = "{{ arch() }}"
+```
+
+### `os()`
+
+Returns the OS name (`linux`, `macos`, `windows`):
+
+```toml mise.toml
+[tools]
+# Use different tool versions per OS
+python = "{% if os() == 'macos' %}3.12{% else %}3.11{% endif %}"
+```
+
+### `os_family()`
+
+Returns the OS family (`unix` or `windows`).
+
+### `num_cpus()`
+
+Returns the number of logical CPUs:
+
+```toml mise.toml
+[tasks.build]
+run = "make -j{{ num_cpus() }}"
+```
+
+## Filters
+
+Apply Tera filters with `|`:
+
+```toml mise.toml
+[env]
+# basename: get last path component
+DIR_NAME = "{{ cwd | basename }}"
+
+# upper/lower: change case
+UPPER = "{{ env.project | upper }}"
+```
+
+Standard Tera string filters are available: `upper`, `lower`, `trim`, `replace`, `truncate`, `basename`, `dirname`, and many more.
+
+## Conditionals
+
+```toml mise.toml
+[env]
+PLATFORM = "{% if os() == 'macos' %}darwin{% elif os() == 'windows' %}win32{% else %}linux{% endif %}"
+```
+
+## Full example
+
+```toml mise.toml
+[env]
+PROJECT_NAME = "{{ cwd | basename }}"
+NODE_ENV = "{{ get_env(name='NODE_ENV', default='development') }}"
+GIT_SHA = "{{ exec(command='git rev-parse --short HEAD') }}"
+
+[tools]
+node = "{{ get_env(name='NODE_VERSION', default='22') }}"
+python = "{{ get_env(name='PYTHON_VERSION', default='3.12') }}"
+
+[tasks.build]
+run = "make -j{{ num_cpus() }} build"
+```

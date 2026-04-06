@@ -1,0 +1,330 @@
+---
+title: "Configuration overview"
+description: "How mise loads and merges configuration from mise.toml files across system, global, and project scopes."
+---
+
+Mise is configured through `mise.toml` files. These files declare tool versions, environment variables, tasks, and settings. Mise walks up the directory tree to collect all relevant config files, then merges them so that more specific (closer to your working directory) settings override broader ones.
+
+## Config file locations
+
+Mise looks for config files in the following locations within each directory it searches. Files are listed in **order of precedence** — a file higher in this list overrides files below it:
+
+| File | Purpose |
+| --- | --- |
+| `mise.local.toml` | Local overrides, should not be committed to source control |
+| `mise.toml` | Primary project config |
+| `mise/config.toml` | Alternative location |
+| `.mise/config.toml` | Dotfile alternative |
+| `.config/mise.toml` | Groups config into a common directory |
+| `.config/mise/config.toml` | Full XDG-style path |
+| `.config/mise/conf.d/*.toml` | Fragment files, loaded alphabetically |
+
+<Note>
+  Files prefixed with `mise` can also be written as dotfiles. For example, `mise.toml` and `.mise.toml` are equivalent, as are `mise/config.toml` and `.mise/config.toml`.
+</Note>
+
+Run `mise config` (or `mise cfg`) to see exactly which files mise has loaded in your current directory, in precedence order.
+
+## Configuration hierarchy
+
+Configuration is collected from three scopes and merged together:
+
+<Steps>
+  <Step title="System config">
+    `/etc/mise/config.toml` applies to all users on the machine. Use this for organization-wide defaults on shared systems.
+
+    ```
+    /etc/mise/
+    ├── config.toml          # System-wide defaults
+    ├── config.<env>.toml    # Env-specific system config
+    └── conf.d/*.toml        # Fragment files
+    ```
+  </Step>
+
+  <Step title="Global config">
+    `~/.config/mise/config.toml` applies to all your projects. Set global tool versions here using `mise use -g`.
+
+    ```
+    ~/.config/mise/
+    ├── config.toml              # Your global defaults
+    ├── config.<env>.toml        # Env-specific user config
+    ├── config.local.toml        # Local user overrides
+    └── conf.d/*.toml            # Fragment files
+    ```
+  </Step>
+
+  <Step title="Project config">
+    `mise.toml` files in your project directories apply only to that directory and its subdirectories.
+
+    ```
+    ~/work/
+    ├── mise.toml                    # Work-wide settings
+    └── myproject/
+        ├── mise.toml                # Project config
+        ├── mise.local.toml          # Local overrides (git-ignored)
+        ├── mise.<env>.toml          # Env-specific project config
+        └── backend/
+            └── mise.toml            # Service-specific config
+    ```
+  </Step>
+</Steps>
+
+More specific configs (closer to your current directory) take precedence over broader ones. The full merged result is what mise uses.
+
+## Merge behavior by section
+
+Different sections of `mise.toml` merge differently:
+
+<AccordionGroup>
+  <Accordion title="[tools] — additive with overrides">
+    Tool versions merge across configs. A project config can override or extend tools from a global config:
+
+    ```toml
+    # Global config: node@18, python@3.11
+    # Project config: node@20, go@1.21
+    # Result: node@20, python@3.11, go@1.21
+    ```
+  </Accordion>
+
+  <Accordion title="[env] — additive with overrides">
+    Environment variables merge across configs, with more specific values overriding broader ones:
+
+    ```toml
+    # Global config: NODE_ENV=development
+    # Project config: NODE_ENV=production, API_URL=localhost
+    # Result: NODE_ENV=production, API_URL=localhost
+    ```
+  </Accordion>
+
+  <Accordion title="[tasks] — replaced per task">
+    Each task definition completely replaces any task with the same name from a parent config:
+
+    ```toml
+    # Global config: [tasks.test] = "npm test"
+    # Project config: [tasks.test] = "yarn test"
+    # Result: "yarn test" — the global definition is replaced entirely
+    ```
+  </Accordion>
+
+  <Accordion title="[settings] — additive with overrides">
+    Settings from multiple configs combine, with more specific settings overriding broader ones:
+
+    ```toml
+    # Global config: experimental = true
+    # Project config: jobs = 4
+    # Result: experimental = true, jobs = 4
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## A full mise.toml example
+
+```toml mise.toml
+[tools]
+node = '24'
+python = '3.12'
+
+[env]
+NODE_ENV = 'development'
+
+[tasks.dev]
+run = 'npm run dev'
+
+[tasks.test]
+run = 'pytest'
+
+[settings]
+jobs = 4
+```
+
+## Config sections
+
+### `[tools]`
+
+Declares the tool versions required for this project. See [Dev tools](/dev-tools/overview) for full details.
+
+```toml mise.toml
+[tools]
+node = '24'
+python = '3.12'
+ruby = 'latest'
+
+# With options
+node = { version = '22', postinstall = 'corepack enable' }
+```
+
+### `[env]`
+
+Sets environment variables when you enter this directory. See [Environments](/environments/overview) for full details.
+
+```toml mise.toml
+[env]
+NODE_ENV = 'development'
+DATABASE_URL = 'postgres://localhost/mydb'
+```
+
+### `[tasks]`
+
+Defines runnable tasks for this project. See [Tasks](/tasks/overview) for full details.
+
+```toml mise.toml
+[tasks.build]
+run = 'npm run build'
+
+[tasks.test]
+run = 'pytest tests/'
+depends = ['build']
+```
+
+### `[settings]`
+
+Overrides mise settings for this project scope. See [Settings](/configuration/settings) for the full list.
+
+```toml mise.toml
+[settings]
+jobs = 4
+verbose = false
+```
+
+### `[plugins]`
+
+Specifies custom plugin repository URLs. This affects only new plugin installations.
+
+```toml mise.toml
+[plugins]
+elixir = 'https://github.com/my-org/mise-elixir.git'
+node = 'https://github.com/my-org/mise-node.git#DEADBEEF'
+```
+
+### `[tool_alias]`
+
+Defines version aliases for tools.
+
+```toml mise.toml
+[tool_alias.node.versions]
+my_custom_node = '20'
+```
+
+This makes `mise install node@my_custom_node` install Node 20.x.
+
+### `[shell_alias]`
+
+Defines shell aliases that activate when you enter this directory and deactivate when you leave.
+
+```toml mise.toml
+[shell_alias]
+ll = 'ls -la'
+gs = 'git status'
+```
+
+## Global config
+
+Your global config at `~/.config/mise/config.toml` applies to all directories:
+
+```toml ~/.config/mise/config.toml
+[tools]
+node = 'lts'
+python = ['3.10', '3.11']
+
+[settings]
+idiomatic_version_file_enable_tools = ['node']
+always_keep_download = false
+jobs = 4
+verbose = false
+```
+
+## Minimum mise version
+
+Specify the minimum mise version required for a config file:
+
+```toml mise.toml
+# Hard minimum — errors if unmet
+min_version = '2024.11.1'
+
+# Soft minimum — warns if unmet, continues anyway
+min_version = { soft = '2024.11.1' }
+
+# Both
+min_version = { hard = '2024.11.1', soft = '2024.9.0' }
+```
+
+## Write target
+
+When commands like `mise use`, `mise set`, or `mise unuse` write to a config file, they use the **lowest precedence file in the highest precedence directory**:
+
+- If both `mise.toml` and `mise.local.toml` exist, writes go to `mise.toml`
+- If only `mise.local.toml` exists, writes go to `mise.local.toml`
+
+```sh
+# With both mise.toml and mise.local.toml present
+mise use node@22          # writes to mise.toml
+mise use --env local node@20  # writes to mise.local.toml
+```
+
+## `.tool-versions` compatibility
+
+Mise is compatible with asdf's `.tool-versions` format. You can use these files in any directory where mise looks for config:
+
+```text .tool-versions
+node 20.0.0
+ruby 3
+shellcheck latest
+jq 1.6
+erlang ref:master
+go prefix:1.19
+```
+
+<Info>
+  `.tool-versions` is less flexible than `mise.toml`. If you're starting a new project, use `mise.toml` instead.
+</Info>
+
+### Idiomatic version files
+
+Mise also reads language-specific version files when enabled. These let other tools like `nvm` or `rbenv` read the same version specification:
+
+| Tool | Files |
+| --- | --- |
+| node | `.nvmrc`, `.node-version`, `package.json` |
+| python | `.python-version`, `.python-versions` |
+| ruby | `.ruby-version`, `Gemfile` |
+| go | `.go-version` |
+| java | `.java-version`, `.sdkmanrc` |
+| terraform | `.terraform-version`, `main.tf` |
+
+Idiomatic version files are disabled by default. Enable them per-tool:
+
+```sh
+mise settings add idiomatic_version_file_enable_tools python
+```
+
+Or in your config:
+
+```toml ~/.config/mise/config.toml
+[settings]
+idiomatic_version_file_enable_tools = ['node', 'python']
+```
+
+## Version scopes
+
+Both `mise.toml` and `.tool-versions` support version scopes:
+
+| Scope | Example | Meaning |
+| --- | --- | --- |
+| `ref:` | `ref:master` | Compile from a VCS ref |
+| `prefix:` | `prefix:1.20` | Latest version matching the prefix |
+| `path:` | `path:/opt/homebrew/opt/node@20` | Use a custom compiled version |
+| `sub-` | `sub-2:lts` | Two versions behind LTS |
+
+## JSON schema
+
+Mise publishes a JSON schema for `mise.toml` at `https://mise.jdx.dev/schema/mise.json`. Many editors can use this for autocompletion and validation.
+
+## Special keys
+
+The `[_]` table is reserved for metadata that mise never parses. Use it for comments or documentation within `mise.toml` that should be ignored by mise:
+
+```toml mise.toml
+[_]
+maintainer = 'Alice'
+docs = 'https://internal.example.com/mise-setup'
+```

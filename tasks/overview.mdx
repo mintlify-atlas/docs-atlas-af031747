@@ -1,0 +1,111 @@
+---
+title: "Tasks overview"
+description: "Define and run project tasks in mise — from simple one-liners to complex dependency graphs."
+---
+
+Mise includes a task runner similar to [make](https://www.gnu.org/software/make/manual/make.html). You can define tasks in `mise.toml` files or as standalone shell scripts. Tasks launched with mise automatically inherit the mise environment — your tools and env vars from `mise.toml` are all available.
+
+Highlights of the mise task runner:
+
+- Dependencies run in parallel by default, with no extra configuration
+- Last-modified checking skips tasks when inputs haven't changed
+- `mise watch` rebuilds automatically when source files change
+- File tasks are real shell scripts with full syntax highlighting and linting support in editors
+
+## Two ways to define tasks
+
+<CardGroup cols={2}>
+  <Card title="TOML tasks" icon="file-code" href="/tasks/toml-tasks">
+    Define tasks directly in `mise.toml`. Good for simple commands, dependency graphs, and tasks that benefit from being co-located with tool and env config.
+  </Card>
+  <Card title="File tasks" icon="file" href="/tasks/file-tasks">
+    Write tasks as standalone executable scripts in a `mise-tasks/` directory. Good for complex logic, multi-language scripts, and tasks that benefit from full editor support.
+  </Card>
+</CardGroup>
+
+<Card title="Running tasks" icon="play" href="/tasks/running-tasks">
+  Learn how to run tasks, pass arguments, run tasks in parallel, watch for file changes, and control output modes.
+</Card>
+
+### When to use TOML tasks
+
+Use TOML tasks when:
+- The task is a short command or a simple sequence of commands
+- You want all your project config in one file
+- The task has dependencies you want mise to run in the right order
+
+```toml mise.toml
+[tasks.build]
+description = 'Build the CLI'
+run = "cargo build"
+alias = 'b'
+
+[tasks.test]
+depends = ['build']
+run = "cargo test"
+```
+
+### When to use file tasks
+
+Use file tasks when:
+- The task contains significant logic that benefits from syntax highlighting and linting
+- You want non-mise users to be able to run the script directly
+- The task is written in a language other than bash (Node.js, Python, Deno, etc.)
+
+```bash mise-tasks/build
+#!/usr/bin/env bash
+#MISE description="Build the CLI"
+cargo build
+```
+
+## Environment variables passed to tasks
+
+Mise sets the following environment variables in every task:
+
+| Variable | Value |
+| --- | --- |
+| `MISE_ORIGINAL_CWD` | The directory you were in when you ran `mise run` |
+| `MISE_CONFIG_ROOT` | The directory containing the `mise.toml` where the task was defined |
+| `MISE_PROJECT_ROOT` | The root of the project |
+| `MISE_TASK_NAME` | The name of the running task |
+| `MISE_TASK_DIR` | The directory containing the task script (file tasks only) |
+| `MISE_TASK_FILE` | The full path to the task script (file tasks only) |
+
+By default, tasks run from `MISE_CONFIG_ROOT`. To run in the user's current directory instead, set `dir = "{{cwd}}"` in the task definition or use `$MISE_ORIGINAL_CWD` inside the script.
+
+## Quick example
+
+```toml mise.toml
+[tasks.ci]
+description = 'Run CI tasks'
+depends = ['build', 'lint', 'test']
+
+[tasks.build]
+description = 'Build the CLI'
+run = "cargo build"
+sources = ['Cargo.toml', 'src/**/*.rs']
+outputs = ['target/debug/mycli']
+
+[tasks.lint]
+description = 'Lint with clippy'
+env = { RUST_BACKTRACE = '1' }
+run = '''
+#!/usr/bin/env bash
+cargo clippy
+'''
+
+[tasks.test]
+description = 'Run automated tests'
+run = [
+    'cargo test',
+    './scripts/test-e2e.sh',
+]
+```
+
+Run the CI task:
+
+```sh
+mise run ci
+```
+
+Mise resolves the dependency graph, runs what it can in parallel, and skips `build` if no source files have changed since the last run.

@@ -1,0 +1,78 @@
+---
+title: "mise install"
+sidebarTitle: "install"
+description: "Install tool versions without modifying any config file."
+---
+
+## Synopsis
+
+```sh
+mise install [FLAGS] [TOOL@VERSION]…
+```
+
+**Alias:** `mise i`
+
+## Description
+
+`mise install` downloads and installs one or more tool versions to `~/.local/share/mise/installs/<PLUGIN>/<VERSION>`.
+
+Installing a tool does **not** activate it — it will not appear on `PATH` until it is referenced in a config file or used via [`mise exec`](/cli/exec). To install and activate in one step, use [`mise use`](/cli/use) instead.
+
+By default, tools are installed in parallel. Pass `--jobs=1` or set `MISE_JOBS=1` to disable parallel installation.
+
+<Tip>
+  Run `mise install` with no arguments to install all tools specified across your config files.
+</Tip>
+
+## Arguments
+
+<ParamField path="TOOL@VERSION" type="string">
+  One or more tools to install, for example `node@20.0.0` or `node@20`. If no version is provided, mise installs the version specified in the nearest config file.
+</ParamField>
+
+## Flags
+
+<ParamField path="-f, --force" type="boolean">
+  Force reinstall even if the tool version is already installed. Requires a tool argument.
+</ParamField>
+
+<ParamField path="-j, --jobs <JOBS>" type="number" default="4">
+  Number of installation jobs to run in parallel. Also configurable via `MISE_JOBS`.
+</ParamField>
+
+<ParamField path="-n, --dry-run" type="boolean">
+  Show what would be installed without actually installing anything.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Print plugin output including download, configuration, and compilation details. Can be specified multiple times for more output.
+</ParamField>
+
+<ParamField path="--before <BEFORE>" type="string">
+  Only install versions released before this date. Accepts absolute dates like `2024-06-01` or relative durations like `90d` or `1y`.
+</ParamField>
+
+<ParamField path="--dry-run-code" type="boolean">
+  Like `--dry-run`, but exits with code `1` if there are tools to install. Useful in scripts to check whether installation is needed.
+</ParamField>
+
+<ParamField path="--raw" type="boolean">
+  Pipe stdin/stdout/stderr directly from the plugin to the terminal. Sets `--jobs=1`.
+</ParamField>
+
+<ParamField path="--shared <PATH>" type="string">
+  **Experimental.** Install tools to a shared directory at the specified path instead of the default install location. May require elevated permissions.
+</ParamField>
+
+<ParamField path="--system" type="boolean">
+  **Experimental.** Install tools to the system-wide shared directory (`/usr/local/share/mise/installs`, or the path set by `MISE_SYSTEM_DATA_DIR`). May require elevated permissions (e.g. `sudo`).
+</ParamField>
+
+## Examples
+
+```sh
+mise install node@20.0.0  # Install a specific node version
+mise install node@20      # Install the latest node 20.x release
+mise install node         # Install the version from mise.toml
+mise install              # Install all tools listed in config files
+```

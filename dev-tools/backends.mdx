@@ -1,0 +1,393 @@
+---
+title: "Backends"
+description: "All the package ecosystems mise can install tools from, and how to choose between them."
+---
+
+Backends are the package managers and ecosystems that mise uses to install tools. Each backend handles a different installation method. When you run `mise use`, mise determines the appropriate backend from the tool name prefix, the registry, or explicit selection.
+
+## How backend selection works
+
+Mise resolves which backend to use in this order:
+
+1. **Explicit prefix** — `mise use aqua:golangci/golangci-lint`
+2. **Environment variable override** — `MISE_BACKENDS_<TOOL>` (see below)
+3. **Registry lookup** — `mise use golangci-lint` checks the registry for the default backend
+4. **Core tools** — `mise use node` uses the built-in core backend
+5. **Fallback** — if no match, mise suggests available backends
+
+You typically don't need to think about backend selection. The [mise registry](https://github.com/jdx/mise/blob/main/registry/) defines sensible defaults for hundreds of tools.
+
+### Override with an environment variable
+
+Convert the tool name to `SHOUTY_SNAKE_CASE` and set `MISE_BACKENDS_<TOOL>`:
+
+```bash
+# Use vfox backend for php instead of the registry default
+export MISE_BACKENDS_PHP='vfox:mise-plugins/vfox-php'
+mise install php@latest
+```
+
+### Disable specific backends
+
+```toml ~/.config/mise/config.toml
+[settings]
+disable_backends = ["asdf", "vfox"]
+```
+
+## Capabilities comparison
+
+| Feature | Core | npm/pipx/cargo | aqua | github | Tool Plugins (vfox) | asdf (legacy) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Speed | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ |
+| Security | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Windows support | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Env var support | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Custom scripts | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Security attestations | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| Multi-tool plugins | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+## Available backends
+
+<AccordionGroup>
+  <Accordion title="Core (built-in)">
+    Core tools are built directly into mise in Rust for the best performance and reliability. They require no external dependencies and have the deepest integration with mise features.
+
+    **Examples:** `node`, `python`, `ruby`, `go`, `java`, `terraform`
+
+    ```toml mise.toml
+    [tools]
+    node = "24"
+    python = "3.12"
+    go = "1.22"
+    ```
+
+    Use core tools whenever they are available for your tool. They offer the fastest installation, zero startup overhead, and the best integration with mise features like environment variables and hooks.
+  </Accordion>
+
+  <Accordion title="aqua">
+    Aqua is a registry-based backend with strong security features. Mise has a built-in reimplementation of aqua — you do not need to install the aqua CLI.
+
+    **Syntax:** `aqua:<owner>/<repo>`
+
+    ```sh
+    mise use -g aqua:BurntSushi/ripgrep
+    rg --version
+    # ripgrep 14.1.1
+    ```
+
+    ```toml mise.toml
+    [tools]
+    "aqua:BurntSushi/ripgrep" = "latest"
+    ```
+
+    Aqua tools are sourced from the [aqua registry](https://github.com/aquaproj/aqua-registry), which is compiled into the mise binary at release. The registry defines which assets to download and how to verify them.
+
+    **Security verification** — aqua natively supports multiple verification methods, all implemented in Rust without external tools:
+
+    - GitHub artifact attestations
+    - Cosign signature verification
+    - SLSA provenance verification
+    - Minisign verification
+    - SHA256/SHA512 checksum verification
+
+    **When to use aqua:**
+    - The tool is in the [aqua registry](https://github.com/aquaproj/aqua-registry)
+    - You want comprehensive security verification
+    - You need Windows support
+    - You're installing pre-compiled binaries
+
+    **Tool option: `symlink_bins`**
+
+    Some tools bundle extra executables you may not want on `PATH`. For example, `aws-cli` bundles Python:
+
+    ```toml mise.toml
+    [tools]
+    aws-cli = { version = "latest", symlink_bins = true }
+    ```
+
+    This creates a filtered `.mise-bins` directory exposing only the binaries defined in the aqua registry for that package.
+
+    <Note>
+      To see which tools default to aqua, run `mise registry | grep aqua:`.
+    </Note>
+  </Accordion>
+
+  <Accordion title="github">
+    The github backend downloads release assets directly from GitHub repositories. It is ideal for tools that distribute pre-built binaries through GitHub releases.
+
+    **Syntax:** `github:<owner>/<repo>`
+
+    ```sh
+    mise use -g github:BurntSushi/ripgrep
+    rg --version
+    # ripgrep 14.1.1
+    ```
+
+    ```toml mise.toml
+    [tools]
+    "github:BurntSushi/ripgrep" = "latest"
+    ```
+
+    **Asset autodetection** — when no `asset_pattern` is specified, mise automatically selects the best asset for your platform based on OS, architecture, libc variant, and archive format.
+
+    **Tool options:**
+
+    ```toml mise.toml
+    # Match a specific asset name pattern
+    "github:cli/cli" = { version = "latest", asset_pattern = "gh_*_linux_x64.tar.gz" }
+
+    # Custom version prefix for release tags
+    "github:user/repo" = { version = "latest", version_prefix = "release-" }
+
+    # Verify checksum
+    "github:owner/repo" = { version = "1.0.0", checksum = "sha256:a1b2c3d4e5f6789..." }
+
+    # Rename the downloaded binary
+    "github:docker/compose" = { version = "2.29.1", bin = "docker-compose" }
+
+    # Filter which binaries are exposed on PATH
+    "github:jgm/pandoc" = { version = "latest", filter_bins = "pandoc" }
+    ```
+
+    **Platform-specific patterns:**
+
+    ```toml mise.toml
+    [tools."github:cli/cli"]
+    version = "latest"
+
+    [tools."github:cli/cli".platforms]
+    linux-x64 = { asset_pattern = "gh_*_linux_x64.tar.gz" }
+    macos-arm64 = { asset_pattern = "gh_*_macOS_arm64.tar.gz" }
+    ```
+
+    **When to use github:**
+    - The tool publishes pre-built binaries on GitHub releases
+    - You want zero configuration (no registry setup required)
+    - The tool follows standard release tarball conventions
+  </Accordion>
+
+  <Accordion title="cargo">
+    The cargo backend installs Rust crates from [crates.io](https://crates.io/). It requires `cargo` to be installed.
+
+    **Syntax:** `cargo:<crate-name>`
+
+    ```sh
+    mise use -g cargo:eza
+    eza --version
+    # eza - A modern, maintained replacement for ls
+    # v0.17.1 [+git]
+    ```
+
+    ```toml mise.toml
+    [tools]
+    "cargo:eza" = "latest"
+    ```
+
+    **Installing cargo** — either via rustup or mise:
+
+    ```sh
+    # Via rustup
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+    # Via mise
+    mise use -g rust
+    ```
+
+    **Install from a Git repository:**
+
+    ```sh
+    # Specific tag
+    mise use cargo:https://github.com/username/demo@tag:<release_tag>
+
+    # Latest from a branch
+    mise use cargo:https://github.com/username/demo@branch:<branch_name>
+
+    # Specific commit
+    mise use cargo:https://github.com/username/demo@rev:<commit_hash>
+    ```
+
+    **Tool options:**
+
+    ```toml mise.toml
+    # Install with additional features
+    "cargo:cargo-edit" = { version = "latest", features = "add" }
+
+    # Disable default features
+    "cargo:cargo-edit" = { version = "latest", default-features = false }
+
+    # Select specific binary when multiple are available
+    "cargo:https://github.com/username/demo" = { version = "tag:v1.0.0", bin = "demo" }
+
+    # Select specific crate from a Git repo
+    "cargo:https://github.com/username/demo" = { version = "tag:v1.0.0", crate = "demo" }
+    ```
+
+    **When to use cargo:**
+    - The tool is a Rust crate distributed on crates.io
+    - You need to build from source with specific features
+    - The tool isn't available as a pre-compiled binary
+  </Accordion>
+
+  <Accordion title="npm">
+    The npm backend installs packages from [npmjs.org](https://npmjs.org/). It requires `npm` (or `bun` / `pnpm`) to be installed.
+
+    **Syntax:** `npm:<package-name>`
+
+    ```sh
+    mise use -g npm:prettier
+    prettier --version
+    # 3.1.0
+    ```
+
+    ```toml mise.toml
+    [tools]
+    "npm:prettier" = "latest"
+    ```
+
+    **Installing node/npm via mise:**
+
+    ```sh
+    mise use -g node
+    # or for bun/pnpm
+    mise use -g bun
+    mise use -g pnpm
+    ```
+
+    **When to use npm:**
+    - The tool is a Node.js CLI package
+    - The tool is primarily distributed through npm
+    - You want to manage Node.js tooling alongside your runtimes
+  </Accordion>
+
+  <Accordion title="pipx (Python)">
+    The pipx backend installs Python CLI tools in isolated environments via [pipx](https://pipx.pypa.io/).
+
+    **Syntax:** `pipx:<package-name>`
+
+    ```toml mise.toml
+    [tools]
+    "pipx:black" = "latest"
+    "pipx:poetry" = "latest"
+    ```
+
+    Mise automatically handles the dependency chain — pipx depends on Python and uv, and mise installs them in the right order.
+
+    **When to use pipx:**
+    - Installing Python CLI tools
+    - The tool is distributed on PyPI
+    - You want isolated Python tool environments
+  </Accordion>
+
+  <Accordion title="go">
+    The go backend installs tools from Go module paths.
+
+    **Syntax:** `go:<module-path>`
+
+    ```toml mise.toml
+    [tools]
+    "go:github.com/golangci/golangci-lint/cmd/golangci-lint" = "latest"
+    ```
+
+    Requires Go to be installed (can be managed by mise itself).
+
+    **When to use go:**
+    - The tool is distributed as a Go module
+    - No pre-built binary is available through aqua or github
+  </Accordion>
+
+  <Accordion title="asdf (legacy)">
+    <Warning>
+      asdf plugins are considered legacy. For new tools, prefer [vfox plugins](/guides/plugins) which are written in Lua, work cross-platform including Windows, and have access to built-in modules for HTTP, JSON, HTML parsing, and more.
+    </Warning>
+
+    The asdf backend provides compatibility with the asdf plugin ecosystem. Plugins are typically Bash scripts and generally do not work on Windows.
+
+    **Syntax:** `asdf:<plugin-name>`
+
+    ```toml mise.toml
+    [tools]
+    "asdf:postgres" = "latest"
+    ```
+
+    Mise actively migrates tools away from asdf toward aqua and github backends where possible. asdf plugins remain useful when a tool has a complex installation process or needs to export environment variables.
+
+    | Feature | asdf plugins | vfox plugins |
+    | --- | --- | --- |
+    | Language | Bash | Lua |
+    | Windows support | ❌ | ✅ |
+    | Built-in HTTP | ❌ | ✅ |
+    | Built-in JSON | ❌ | ✅ |
+    | Security attestations | ❌ | ✅ |
+    | Post-install hooks | ❌ | ✅ |
+  </Accordion>
+
+  <Accordion title="vfox (tool plugins)">
+    The vfox backend supports tool plugins written in Lua. These plugins are cross-platform and have access to built-in modules for HTTP, JSON, HTML parsing, archive extraction, and more.
+
+    **Syntax:** `vfox:<owner>/<plugin-name>`
+
+    ```toml mise.toml
+    [tools]
+    "vfox:mise-plugins/vfox-php" = "8.3"
+    ```
+
+    Use vfox plugins when a tool requires complex installation logic, needs to export environment variables like `JAVA_HOME`, or needs cross-platform support including Windows.
+  </Accordion>
+
+  <Accordion title="http">
+    The http backend downloads tools directly from arbitrary URLs.
+
+    **Syntax:** `http:<url>`
+
+    ```toml mise.toml
+    [tools."http:my-tool"]
+    version = "1.0.0"
+
+    [tools."http:my-tool".platforms]
+    macos-x64 = { url = "https://example.com/my-tool-macos-x64.tar.gz", checksum = "sha256:abc123" }
+    linux-x64 = { url = "https://example.com/my-tool-linux-x64.tar.gz", checksum = "sha256:def456" }
+    ```
+
+    Use the http backend for tools with custom download URLs not covered by github or aqua.
+  </Accordion>
+
+  <Accordion title="ubi (deprecated)">
+    <Warning>
+      The ubi backend is deprecated. Use the [github backend](#github) instead. Replace `ubi:owner/repo` with `github:owner/repo`.
+    </Warning>
+
+    Ubi was a zero-configuration installer for GitHub and GitLab repositories. The github backend supersedes it with more features and better support.
+  </Accordion>
+</AccordionGroup>
+
+## Backend dependencies
+
+Some backends depend on other tools being installed first. Mise handles this automatically:
+
+| Backend | Requires |
+| --- | --- |
+| `npm` | Node.js |
+| `pipx` | pipx, Python |
+| `cargo` | Rust / cargo |
+| `gem` | Ruby |
+| `go` | Go |
+
+## Forcing a specific backend
+
+Override the default backend for a tool explicitly in `mise.toml`:
+
+```toml mise.toml
+[tools]
+"core:node" = "20"     # Explicitly use core backend
+"aqua:yarn" = "latest" # Use aqua instead of registry default
+```
+
+## Backend-specific settings
+
+Some backends support additional configuration options:
+
+```toml mise.toml
+[tools]
+python = { version = "3.12", virtualenv = ".venv" }  # Core backend
+black = { version = "latest", python = "3.12" }      # pipx backend
+```

@@ -1,0 +1,93 @@
+---
+title: "Plugins"
+description: "Extend mise with plugins for additional tools and environment management."
+---
+
+Plugins extend mise with support for additional tools and environment variable management.
+
+<Note>
+For most tools, plugins are no longer necessary. The [aqua](/dev-tools/backends) and [github](/dev-tools/backends) backends cover hundreds of tools without requiring manual plugin installation. Prefer those when possible.
+</Note>
+
+## When to use plugins
+
+Use plugins when:
+- The tool needs to set environment variables globally (e.g., Java's `JAVA_HOME`)
+- The tool has a complex installation process not handled by aqua/github
+- You need to use a legacy asdf plugin
+
+## Managing plugins
+
+```bash
+# List installed plugins
+mise plugins ls
+mise plugins ls --urls   # include git URLs
+
+# Install a plugin
+mise plugins install node
+mise plugins install my-plugin https://github.com/user/mise-plugin-name
+
+# Update plugins
+mise plugins update
+mise plugins update node  # update specific plugin
+
+# Remove a plugin
+mise plugins uninstall node
+```
+
+## asdf plugin compatibility
+
+Mise is compatible with asdf plugins. You can install any plugin from the asdf ecosystem:
+
+```bash
+# Install an asdf plugin by URL
+mise plugins install java https://github.com/halcyon/asdf-java.git
+```
+
+Then use it like any other tool:
+
+```bash
+mise use java@21
+```
+
+## vfox plugins
+
+Mise also supports [vfox](https://vfox.lhan.me/) plugins, which use a Lua-based API:
+
+```bash
+mise plugins install vfox:version-fox/vfox-nodejs
+mise use vfox:nodejs@22
+```
+
+## Tool plugins format
+
+Plugins installed with the `plugin:tool` format allow a single plugin to manage multiple tools:
+
+```bash
+mise plugins install my-plugin https://github.com/user/my-plugin
+mise use my-plugin:some-tool@1.0.0
+```
+
+## Plugin-provided environment variables
+
+Plugins can inject environment variables when their tool is active. For example, the Java plugin sets `JAVA_HOME`:
+
+```bash
+mise use java@21
+# Automatically sets JAVA_HOME=/path/to/java/21
+```
+
+## Finding plugins
+
+Browse available plugins:
+
+```bash
+# List all plugins available in the registry
+mise plugins ls-remote
+```
+
+Or search the [mise plugin registry](https://github.com/mise-plugins/registry).
+
+<Warning>
+For security reasons, new tools using the asdf plugin backend are no longer accepted into the mise registry unless aqua/github backends are not viable options. Prefer aqua or github backends for new tools.
+</Warning>

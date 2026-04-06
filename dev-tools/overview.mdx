@@ -1,0 +1,253 @@
+---
+title: "Dev tools overview"
+description: "How mise manages tool versions, resolves configurations, and switches between runtimes automatically."
+---
+
+Mise manages installations of programming language runtimes and other tools for local development. It can manage multiple versions of Node.js, Python, Ruby, Go, and hundreds more on the same machine, automatically switching between them based on the directory you're in.
+
+## How mise resolves tools
+
+When you enter a directory or run a command, mise follows this process:
+
+<Steps>
+  <Step title="Configuration discovery">
+    Mise walks up the directory tree looking for configuration files (`mise.toml`, `.tool-versions`, etc.) and merges them hierarchically. A project config overrides a workspace config, which overrides your global config.
+
+    ```
+    ~/.config/mise/config.toml      # Global defaults
+    ~/work/mise.toml                # Work-specific tools
+    ~/work/project/mise.toml        # Project-specific overrides
+    ~/work/project/.tool-versions   # Legacy asdf compatibility
+    ```
+  </Step>
+
+  <Step title="Version resolution">
+    Mise resolves version specifications like `node@latest` or `python@3` to specific versions using registries and cached version lists.
+  </Step>
+
+  <Step title="Backend selection">
+    Mise chooses the appropriate [backend](/dev-tools/backends) to handle each tool — core, aqua, asdf, cargo, npm, etc.
+  </Step>
+
+  <Step title="Installation check">
+    Mise verifies whether the required tool versions are installed, automatically installing missing ones.
+  </Step>
+
+  <Step title="Environment setup">
+    Mise configures your `PATH` and environment variables to point at the resolved tool versions.
+
+    ```sh
+    # After mise activation in a project with node@20
+    echo $PATH
+    # /home/user/.local/share/mise/installs/node/20.11.0/bin:/usr/local/bin:/usr/bin:/bin
+    ```
+  </Step>
+</Steps>
+
+## The `[tools]` section
+
+Declare which tools and versions a project requires in a `mise.toml` file:
+
+```toml mise.toml
+[tools]
+node = "24"
+python = "3"
+ruby = "latest"
+```
+
+Run `mise install` after editing to install any new tools. Or use `mise use` to install and update the config in one step:
+
+```sh
+mise use node@24
+```
+
+Mise is also compatible with asdf `.tool-versions` files and idiomatic version files like `.node-version` and `.ruby-version`.
+
+### Version specification syntax
+
+| Syntax | Meaning |
+| --- | --- |
+| `"24"` | Latest patch release of major version 24 |
+| `"24.0.0"` | Exact version |
+| `"latest"` | Latest stable release |
+| `"lts"` | Latest LTS release (where supported) |
+| `"prefix:24"` | Latest matching the prefix `24` |
+
+### Multiple tools
+
+You can declare as many tools as your project needs:
+
+```toml mise.toml
+[tools]
+node = "24"
+python = "3.12"
+go = "1.22"
+ruby = "3.3"
+java = "21"
+terraform = "1.9"
+```
+
+## Tool options
+
+Tool options let you customize how individual tools are installed and configured.
+
+### Table format
+
+```toml mise.toml
+[tools."http:my-tool"]
+version = "1.0.0"
+
+[tools."http:my-tool".platforms]
+macos-x64 = { url = "https://example.com/my-tool-macos-x64.tar.gz", checksum = "sha256:abc123" }
+linux-x64 = { url = "https://example.com/my-tool-linux-x64.tar.gz", checksum = "sha256:def456" }
+```
+
+### Dotted notation
+
+```toml mise.toml
+[tools."http:my-tool"]
+version = "1.0.0"
+platforms.macos-x64.url = "https://example.com/my-tool-macos-x64.tar.gz"
+platforms.linux-x64.url = "https://example.com/my-tool-linux-x64.tar.gz"
+simple_option = "value"
+```
+
+### Postinstall commands
+
+Run a command immediately after a tool finishes installing:
+
+```toml mise.toml
+[tools]
+node = { version = "22", postinstall = "corepack enable" }
+```
+
+The tool's bin path is on `PATH` during the command, and `MISE_TOOL_INSTALL_PATH` points to the install directory.
+
+## OS-specific tools
+
+Restrict tools to specific operating systems with the `os` field:
+
+```toml mise.toml
+[tools]
+# Only install on Linux and macOS
+ripgrep = { version = "latest", os = ["linux", "macos"] }
+
+# Only install on Windows
+"npm:windows-terminal" = { version = "latest", os = ["windows"] }
+
+# Works with other options
+"cargo:usage-cli" = {
+    version = "latest",
+    os = ["linux", "macos"],
+    install_env = { RUST_BACKTRACE = "1" }
+}
+```
+
+Accepted values: `"linux"`, `"macos"`, `"windows"`.
+
+## Tool dependencies
+
+Use `depends` to declare explicit installation ordering between tools:
+
+```toml mise.toml
+[tools]
+python = "3.12.11"
+"pipx:ruff" = { version = "latest", depends = ["python"] }
+```
+
+The `depends` field accepts a single string or an array:
+
+```toml mise.toml
+[tools]
+# Single dependency
+"pipx:ruff" = { version = "latest", depends = "python" }
+
+# Multiple dependencies
+"pipx:ruff" = { version = "latest", depends = ["python", "pipx"] }
+```
+
+<Note>
+  Backends like `pipx` already declare automatic dependencies (e.g., `pipx` depends on `python` and `uv`). Use `depends` only to add extra ordering constraints specific to your setup.
+</Note>
+
+## Key commands
+
+### `mise use`
+
+Installs a tool, sets it as active, and updates the config file:
+
+```sh
+cd my-project
+mise use node@24
+# mise node@24.x.x ✓ installed
+# mise ~/my-project/mise.toml tools: node@24.x.x
+
+which node
+# ~/.local/share/installs/node/24.x.x/bin/node
+```
+
+Use `-g` to update your global config instead:
+
+```sh
+mise use -g node@24
+```
+
+### `mise install`
+
+Downloads and installs tools without modifying any config file:
+
+```sh
+mise install node@20.0.0   # Install a specific version
+mise install node@20       # Install latest matching this prefix
+mise install node          # Install the version from mise.toml
+mise install               # Install all tools in config files
+```
+
+### `mise exec` / `mise x`
+
+Run a one-off command with specific tools loaded:
+
+```sh
+mise x python@3.12 -- ./myscript.py
+```
+
+Or use tools already specified in `mise.toml`:
+
+```sh
+mise use node@20
+mise x -- node -v
+# 20.x.x
+```
+
+<Tip>
+  Create an alias for frequently used exec commands: `alias mx="mise x --"`
+</Tip>
+
+## Auto-install
+
+Mise can install missing tools automatically. All auto-install behaviors are enabled by default.
+
+| Trigger | Setting | Default |
+| --- | --- | --- |
+| `mise x` or `mise r` runs a missing tool | `exec_auto_install` | `true` |
+| Task runs a missing tool | `task_auto_install` | `true` |
+| Shell command not found | `not_found_auto_install` | `true` |
+
+<Tip>
+  Disable auto-install for specific tools with `auto_install_disable_tools` in your settings.
+</Tip>
+
+## Caching and performance
+
+Mise uses caching to minimize overhead:
+
+- **Version lists** — cached daily to avoid repeated API calls
+- **Installation artifacts** — cached downloads to speed up reinstalls
+- **Environment resolution** — cached setups for faster shell prompts
+- **Plugin metadata** — cached plugin information for quicker operations
+
+Mise modifies `PATH` ahead of time so tools are called directly with zero overhead. Running `which node` returns the real binary path, not a shim.
+
+<Info>
+  After activating, mise calls `mise hook-env` each time your prompt is displayed to update environment variables. It exits early when nothing has changed, so the cost is negligible.
+</Info>

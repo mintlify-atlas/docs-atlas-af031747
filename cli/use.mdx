@@ -1,0 +1,113 @@
+---
+title: "mise use"
+sidebarTitle: "use"
+description: "Install a tool and add it to mise.toml."
+---
+
+## Synopsis
+
+```sh
+mise use [FLAGS] [TOOL@VERSION]…
+```
+
+**Alias:** `mise u`
+
+## Description
+
+`mise use` installs a tool version and writes it to a `mise.toml` config file so it stays active inside the current directory. If the version is already installed, it skips installation unless `--force` is passed.
+
+By default the command targets the lowest-precedence config file in the current directory (usually `mise.toml`). Use the flags below to write to a different file instead.
+
+**Config file selection order:**
+
+1. `--global` — writes to `~/.config/mise/config.toml`
+2. `--path <PATH>` — writes to the specified file or directory
+3. `--env <ENV>` — writes to `mise.<env>.toml`
+4. `MISE_DEFAULT_CONFIG_FILENAME` — uses the filename set by this env var
+5. `MISE_OVERRIDE_CONFIG_FILENAMES` — uses the first entry in this list
+6. Otherwise — `mise.toml` in the current directory, or the global config if cwd is the home directory
+
+<Note>
+  Run `mise use` with no arguments to open an interactive tool selector.
+</Note>
+
+## Arguments
+
+<ParamField path="TOOL@VERSION" type="string">
+  One or more tools to install and add to the config file. For example: `node@20`, `cargo:ripgrep@latest`, `npm:prettier@3`. If no version is provided, it defaults to `@latest`.
+
+  Tool options can be passed inline:
+
+  ```sh
+  mise use ubi:BurntSushi/ripgrep[exe=rg]
+  ```
+</ParamField>
+
+## Flags
+
+<ParamField path="-e, --env <ENV>" type="string">
+  Create or modify an environment-specific config file such as `.mise.<env>.toml`.
+</ParamField>
+
+<ParamField path="-f, --force" type="boolean">
+  Force reinstall even if the tool version is already installed. Requires a tool argument.
+</ParamField>
+
+<ParamField path="-g, --global" type="boolean">
+  Write the tool version to the global config file (`~/.config/mise/config.toml`) instead of the local one.
+</ParamField>
+
+<ParamField path="-j, --jobs <JOBS>" type="number" default="4">
+  Number of installation jobs to run in parallel. Also configurable via `MISE_JOBS`.
+</ParamField>
+
+<ParamField path="-n, --dry-run" type="boolean">
+  Show what would be installed and which config file would be modified, without making any changes.
+</ParamField>
+
+<ParamField path="-p, --path <PATH>" type="string">
+  Path to a config file or directory. If a directory is given, mise searches it for a config file using the same rules as above.
+</ParamField>
+
+<ParamField path="--before <BEFORE>" type="string">
+  Only install versions released before this date. Accepts absolute dates like `2024-06-01` or relative durations like `90d` or `1y`.
+</ParamField>
+
+<ParamField path="--dry-run-code" type="boolean">
+  Like `--dry-run`, but exits with code `1` if there are changes to make. Useful in scripts to check whether tools need to be added or removed.
+</ParamField>
+
+<ParamField path="--fuzzy" type="boolean">
+  Save a fuzzy version to the config file. For example, `mise use --fuzzy node@20` writes `20` rather than `20.0.0`. This is the default unless `MISE_PIN=1`.
+</ParamField>
+
+<ParamField path="--pin" type="boolean">
+  Save the exact resolved version to the config file. For example, `mise use --pin node@20` writes `20.0.0`. Set `MISE_PIN=1` to make this the default.
+</ParamField>
+
+<ParamField path="--raw" type="boolean">
+  Pipe stdin/stdout/stderr directly from the plugin to the terminal. Sets `--jobs=1`.
+</ParamField>
+
+<ParamField path="--remove <PLUGIN>" type="string">
+  Remove the specified plugin(s) from the config file. Aliases: `--rm`, `--unset`.
+</ParamField>
+
+## Examples
+
+```sh
+# Open the interactive tool selector
+mise use
+
+# Set node 20.x in mise.toml of the current directory (writes fuzzy version, e.g. 20)
+mise use node@20
+
+# Set node 20.x in the global config, pinned to the exact version (e.g. 20.0.0)
+mise use -g --pin node@20
+
+# Write to .mise.local.toml (not intended to be committed)
+mise use --env local node@20
+
+# Write to .mise.staging.toml (active when MISE_ENV=staging)
+mise use --env staging node@20
+```

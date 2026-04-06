@@ -1,0 +1,68 @@
+---
+title: "mise ls"
+description: "List installed and active tool versions managed by mise."
+sidebarTitle: "ls"
+---
+
+**Usage:** `mise ls [FLAGS] [TOOL]…`
+
+**Alias:** `list`
+
+List tools that mise knows about — installed versions, active versions from config files, and missing versions.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[TOOL]…` | Filter output to specific tools |
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-c, --current` | Only show versions currently specified in a `mise.toml` |
+| `-g, --global` | Only show versions from the global `mise.toml` |
+| `-i, --installed` | Only show installed versions (hide tools defined but not installed) |
+| `-l, --local` | Only show versions from the local `mise.toml` |
+| `-m, --missing` | Show tools that are defined but not installed |
+| `-J, --json` | Output in JSON format |
+| `--outdated` | Show whether each version is outdated |
+| `--all-sources` | Show all config sources for each tool |
+| `--no-header` | Suppress table header |
+| `--prefix <PREFIX>` | Filter to versions starting with this prefix |
+
+## Examples
+
+```bash
+# List all known tools
+mise ls
+
+# List only currently active tools
+mise ls --current
+
+# List only installed tools
+mise ls --installed
+
+# Find tools that need installation
+mise ls --missing
+
+# List a specific tool
+mise ls node
+
+# Check for outdated versions
+mise ls --outdated
+
+# JSON output for scripting
+mise ls --json
+```
+
+## Output format
+
+```
+Tool    Version    Config Source        Requested  Missing
+node    22.3.0     ~/project/mise.toml  22         false
+python  3.12.0     ~/project/mise.toml  3.12       false
+go      missing    ~/project/mise.toml  1.22       true
+```
+
+Tools with `Missing = true` need to be installed with `mise install`.

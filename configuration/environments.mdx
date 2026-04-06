@@ -1,0 +1,103 @@
+---
+title: "Config Environments"
+description: "Use environment-specific mise.toml files for development, production, and other profiles."
+---
+
+Mise supports separate configuration files for different environments like `development`, `production`, or `ci`. This lets you define different tools, environment variables, and tasks per environment.
+
+## Enabling an environment
+
+Set the `MISE_ENV` environment variable to activate a profile:
+
+```bash
+MISE_ENV=development mise install
+MISE_ENV=production mise run deploy
+```
+
+Or pass it as a CLI flag:
+
+```bash
+mise -E development install
+mise --env development install
+```
+
+## Environment-specific config files
+
+When `MISE_ENV=development` is set, mise looks for files like:
+
+```
+mise.development.toml
+mise.development.local.toml
+```
+
+These are loaded in addition to the standard `mise.toml`, with environment-specific files taking higher precedence.
+
+### Full priority order (highest to lowest)
+
+```
+mise.{MISE_ENV}.local.toml
+mise.local.toml
+mise.{MISE_ENV}.toml
+mise.toml
+```
+
+## Setting MISE_ENV persistently
+
+Use a `.miserc.toml` file to commit the environment choice to version control:
+
+```toml .miserc.toml
+env = ["development"]
+```
+
+Mise reads `.miserc.toml` very early, before other config files are discovered. It searches for this file in the current directory up to root, then the global config directory.
+
+<Note>
+`MISE_ENV` cannot be set in `mise.toml` itself — it determines which config files to load.
+</Note>
+
+## Multiple environments
+
+Specify multiple environments with comma separation:
+
+```bash
+MISE_ENV=ci,test mise install
+```
+
+The last specified environment has the highest precedence.
+
+## Local overrides
+
+Local config files (`mise.local.toml`, `mise.{MISE_ENV}.local.toml`) are intended for machine-specific overrides and should not be committed to version control:
+
+```bash
+# .gitignore
+mise.local.toml
+mise.*.local.toml
+```
+
+## Example: development vs CI
+
+```toml mise.development.toml
+[tools]
+node = "22"
+
+[env]
+NODE_ENV = "development"
+DEBUG = "app:*"
+```
+
+```toml mise.ci.toml
+[tools]
+node = "22"
+
+[env]
+NODE_ENV = "test"
+CI = "true"
+```
+
+## Checking active configs
+
+```bash
+mise config ls    # list active config files in load order
+mise config       # same
+```

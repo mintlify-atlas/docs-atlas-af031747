@@ -1,28 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Mise",
+  "projectType": "cli-tool",
+  "projectName": "Mise",
+  "projectDescription": "mise (mise-en-place) is an all-in-one developer tool that manages dev tool versions, environment variables, and project tasks from a single unified configuration.",
   "theme": "aspen",
-  "colors": {
-    "primary": "#040404",
-    "light": "#ffffff",
-    "dark": "#040404"
-  },
-  "favicon": "https://media.brand.dev/70dde274-e5b7-4cf0-9624-03f883390baf.png",
-  "logo": {
-    "light": "https://media.brand.dev/9457ad5f-5721-4f8f-9a21-5c2e046625f6.svg",
-    "dark": "https://media.brand.dev/9457ad5f-5721-4f8f-9a21-5c2e046625f6.svg"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/jdx/mise"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/jdx/mise"
-    }
-  },
+  "primaryColor": "#040404",
+  "lightColor": "#ffffff",
+  "darkColor": null,
   "navigation": {
     "tabs": [
       {
@@ -105,5 +88,31 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Multi-version dev tool management (Node, Python, Go, Ruby, and hundreds more)",
+    "Automatic environment variable management per project directory",
+    "Built-in task runner with parallel execution and file watching",
+    "Hierarchical configuration with mise.toml files",
+    "Multiple backends: asdf, aqua, cargo, npm, GitHub releases, and more",
+    "Shell activation for seamless auto-switching between tool versions",
+    "Secrets management with support for external providers",
+    "ASDF compatibility and plugin ecosystem support"
+  ],
+  "publicApiSurface": [
+    "mise use <tool>@<version>",
+    "mise install [tool@version]",
+    "mise exec <tool@version> -- <command>",
+    "mise run <task>",
+    "mise env [--json] [--dotenv]",
+    "mise ls [--current]",
+    "mise activate <shell>",
+    "mise set <KEY>=<value>",
+    "mise plugins install <name> [url]",
+    "mise upgrade [tool]",
+    "mise doctor",
+    "mise.toml [tools] section",
+    "mise.toml [env] section",
+    "mise.toml [tasks] section"
+  ]
 }

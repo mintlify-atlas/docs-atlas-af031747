@@ -1,0 +1,164 @@
+---
+title: "Troubleshooting"
+description: "Diagnose and fix common issues with mise tool management, shell activation, and environment setup."
+---
+
+## Run mise doctor first
+
+```bash
+mise doctor
+```
+
+This checks your mise installation for common problems and prints actionable warnings.
+
+## Enable debug output
+
+```bash
+MISE_DEBUG=1 mise install
+MISE_TRACE=1 mise install   # even more verbose
+```
+
+Write logs to a file:
+
+```bash
+MISE_LOG_FILE_LEVEL=debug MISE_LOG_FILE=/tmp/mise.log mise install
+```
+
+## `mise activate` not working
+
+`mise activate` should only be used in interactive shell `rc` files (`~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`). It does **not** work in login profiles (`~/.profile`, `~/.zprofile`).
+
+For non-interactive environments (IDEs, scripts, CI), use one of:
+- `mise exec -- <command>` to run a single command with mise tools
+- `mise env` to export environment variables
+- Add shims to `PATH` via `~/.zprofile` / `~/.bash_profile`
+
+See [IDE Integration](/guides/ide-integration) for IDE-specific setup.
+
+## Wrong tool version is being used
+
+If the wrong version is active, mise may not be first in `PATH`. Verify with:
+
+```bash
+mise ls node         # check what version mise thinks is active
+which node           # check what node is on PATH
+mise doctor          # look for PATH warnings
+```
+
+If the version says "missing", install it:
+
+```bash
+mise install
+```
+
+## Slow shell prompts
+
+`mise activate` hooks into your prompt to check for environment changes. Profile it:
+
+```bash
+# Deactivate first to avoid interference
+mise deactivate
+
+# Measure hook-env timing
+MISE_TIMINGS=1 mise hook-env -s zsh 2>&1 >/dev/null
+MISE_TIMINGS=2 mise hook-env -s zsh 2>&1 >/dev/null  # more detail
+```
+
+Common causes:
+- Expensive `_.source` scripts in `mise.toml` (re-run on every prompt)
+- Many tools or plugins
+- Network-dependent env directives
+
+Consider using [shims](/dev-tools/shims) to move the cost from every prompt to every tool invocation.
+
+## Tool installation fails
+
+Try the `--raw` flag to connect stdin/stdout/stderr directly to the terminal:
+
+```bash
+mise install node --raw
+```
+
+This helps if the plugin is trying to prompt for input.
+
+Also try clearing the cache:
+
+```bash
+mise cache clean
+```
+
+## Permission errors
+
+Make sure `~/.local/share/mise` and `~/.local/bin` are writable:
+
+```bash
+ls -la ~/.local/share/mise
+ls -la ~/.local/bin/mise
+```
+
+## Tool not found / command not found
+
+If mise shows "not found" for a tool that should be installed:
+
+```bash
+mise ls --missing          # list tools defined but not installed
+mise install               # install all missing tools
+mise which node            # verify the tool path
+```
+
+## Resetting mise
+
+Clear the cache:
+
+```bash
+mise cache clean
+```
+
+Remove everything except config:
+
+```bash
+mise implode
+```
+
+## GitHub API rate limits
+
+Many tools are hosted on GitHub, and mise uses the GitHub API to list versions. Unauthenticated requests are rate-limited and may produce `403 Forbidden` errors, especially in CI.
+
+Mise checks these sources in order:
+
+| Priority | Source |
+|----------|--------|
+| 1 | `MISE_GITHUB_TOKEN` env var |
+| 2 | `GITHUB_API_TOKEN` env var |
+| 3 | `GITHUB_TOKEN` env var |
+| 4 | `credential_command` setting |
+| 5 | `~/.config/mise/github_tokens.toml` |
+| 6 | gh CLI token (`~/.config/gh/hosts.yml`) |
+
+Set a token via environment variable (no scopes required):
+
+```bash
+export MISE_GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+```
+
+Or store it in a config file:
+
+```toml ~/.config/mise/github_tokens.toml
+[tokens."github.com"]
+token = "ghp_xxxxxxxxxxxx"
+```
+
+In GitHub Actions, `GITHUB_TOKEN` is available automatically — mise picks it up with no extra config.
+
+Debug which token mise is using:
+
+```bash
+mise github token           # check resolved token (masked)
+mise github token --unmask  # show full token
+```
+
+## Getting more help
+
+- Run `mise doctor` and include the output in bug reports
+- Check `mise --version` and update with `mise self-update`
+- File issues at [github.com/jdx/mise](https://github.com/jdx/mise)

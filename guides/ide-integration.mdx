@@ -1,0 +1,115 @@
+---
+title: "IDE Integration"
+description: "Configure VS Code, IntelliJ, and other editors to use tools managed by mise."
+---
+
+IDEs launch differently from interactive shells — they often don't source your shell's `rc` file, so `mise activate` may not run. This guide explains how to make IDEs use the correct tool versions.
+
+## The recommended approach: shims in PATH
+
+The most reliable solution is to add the mise shims directory to your shell's **login profile** (not the interactive `rc` file). IDEs like VS Code and IntelliJ typically read login profiles on startup.
+
+<Tabs>
+  <Tab title="zsh">
+    ```zsh ~/.zprofile
+    eval "$($HOME/.local/bin/mise activate zsh --shims)"
+    ```
+  </Tab>
+  <Tab title="bash">
+    ```bash ~/.bash_profile
+    eval "$($HOME/.local/bin/mise activate bash --shims)"
+    ```
+  </Tab>
+  <Tab title="fish">
+    ```fish ~/.config/fish/config.fish
+    if status is-interactive
+      mise activate fish | source
+    else
+      mise activate fish --shims | source
+    end
+    ```
+  </Tab>
+</Tabs>
+
+After updating your profile, restart the IDE.
+
+<Warning>
+On macOS, do not use `/bin/bash` as your default shell. Use `zsh` instead.
+</Warning>
+
+## Finding your default shell
+
+Your IDE uses your system's default shell to read the login profile.
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    dscl . -read /Users/$USER UserShell
+    ```
+  </Tab>
+  <Tab title="Linux">
+    ```bash
+    getent passwd $USER | cut -d: -f7
+    ```
+  </Tab>
+</Tabs>
+
+## VS Code
+
+After adding shims to your login profile, VS Code will automatically pick up mise-managed tools when launched from the terminal or Finder.
+
+To help VS Code find the correct interpreter, you can also set paths explicitly in your workspace settings:
+
+```json .vscode/settings.json
+{
+  "python.defaultInterpreterPath": "${env:HOME}/.local/share/mise/shims/python",
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
+```
+
+If VS Code doesn't read your login profile, enable it:
+
+```json VS Code settings.json
+{
+  "terminal.integrated.shellArgs.osx": ["-l"]
+}
+```
+
+## IntelliJ / JetBrains
+
+In IntelliJ-based IDEs, configure the SDK path to point to the mise shim:
+
+1. Open **Project Structure** → **SDKs**
+2. Add a new SDK and set the path to the shim, e.g.: `~/.local/share/mise/shims/java`
+
+Alternatively, use `mise where <tool>` to get the exact install path:
+
+```bash
+mise where node
+# /home/user/.local/share/mise/installs/node/22.0.0
+```
+
+## Neovim / Vim
+
+If you launch Neovim from a terminal with `mise activate`, tools are available automatically. For other launch methods, add shims to your profile as above.
+
+## Finding tool paths manually
+
+Use these commands to get exact paths for IDE configuration:
+
+```bash
+# Path to the tool's binary
+mise which node
+# /home/user/.local/share/mise/installs/node/22.0.0/bin/node
+
+# Path to the tool's install directory
+mise where node
+# /home/user/.local/share/mise/installs/node/22.0.0
+
+# Path to the shim (works for any tool)
+echo ~/.local/share/mise/shims/node
+```
+
+<Tip>
+Shim paths (`~/.local/share/mise/shims/node`) are stable across version changes, making them ideal for IDE configuration. The shim resolves to the correct version based on the current directory.
+</Tip>

@@ -1,0 +1,94 @@
+---
+title: "mise config"
+description: "Manage mise.toml config files — list, get, and set configuration values."
+---
+
+## Synopsis
+
+```sh
+mise config [FLAGS] <SUBCOMMAND>
+```
+
+**Aliases:** `cfg`
+
+Manages mise config files. Without a subcommand, runs `mise config ls`.
+
+## Flags
+
+| Flag | Description |
+| --- | --- |
+| `-J, --json` | Output in JSON format. |
+| `--no-header` | Do not print the table header row. |
+| `--tracked-configs` | List all tracked config files. |
+
+## Subcommands
+
+### `mise config ls`
+
+```sh
+mise config ls [FLAGS]
+```
+
+Lists config files currently in use, along with the tools each one defines.
+
+| Flag | Description |
+| --- | --- |
+| `-J, --json` | Output in JSON format. |
+| `--no-header` | Do not print the table header row. |
+| `--tracked-configs` | List all tracked config files. |
+
+```sh
+$ mise config ls
+Path                        Tools
+~/.config/mise/config.toml  pitchfork
+~/src/mise/mise.toml        actionlint, bun, cargo-binstall, cargo:cargo-edit, cargo:cargo-insta
+```
+
+### `mise config get`
+
+```sh
+mise config get [-f --file <FILE>] [KEY]
+```
+
+Displays the value of a key in a `mise.toml` file. Uses dotted key notation to access nested values.
+
+| Flag | Description |
+| --- | --- |
+| `-f, --file <FILE>` | Path to the `mise.toml` file to read. Defaults to the nearest `mise.toml`. |
+
+```sh
+$ mise config get tools.python
+3.12
+```
+
+### `mise config set`
+
+```sh
+mise config set [-f --file <FILE>] [-t --type <TYPE>] <KEY> [VALUE]
+```
+
+Sets the value of a key in a `mise.toml` file. Accepts `KEY=VALUE` syntax or separate `KEY VALUE` arguments.
+
+| Flag | Description |
+| --- | --- |
+| `-f, --file <FILE>` | Path to the `mise.toml` file to edit. Defaults to the nearest `mise.toml`. |
+| `-t, --type <TYPE>` | Force the value type: `infer` (default), `string`, `integer`, `float`, `bool`, `list`, `set`. |
+
+```sh
+$ mise config set tools.python 3.12
+$ mise config set settings.always_keep_download true
+$ mise config set env.TEST_ENV_VAR ABC
+$ mise config set settings.disable_tools --type list node,rust
+
+# Type for settings keys is inferred automatically
+$ mise config set settings.jobs 4
+```
+
+## Examples
+
+```sh
+$ mise config ls
+Path                        Tools
+~/.config/mise/config.toml  pitchfork
+~/src/mise/mise.toml        actionlint, bun, cargo-binstall, cargo:cargo-edit, cargo:cargo-insta
+```

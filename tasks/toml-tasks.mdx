@@ -1,0 +1,422 @@
+---
+title: "TOML tasks"
+description: "Define tasks directly in mise.toml with dependencies, environment variables, sources, and argument parsing."
+---
+
+Tasks can be defined in the `[tasks]` section of `mise.toml`. Simple tasks are one-liners; more detailed tasks get their own `[tasks.<name>]` table.
+
+## Basic syntax
+
+<CodeGroup>
+
+```toml One-liner
+[tasks]
+build = "cargo build"
+test = "cargo test"
+lint = "cargo clippy"
+```
+
+```toml Full task
+[tasks.build]
+description = 'Build the CLI'
+run = "cargo build"
+alias = 'b'
+```
+
+</CodeGroup>
+
+You can also add tasks from the CLI:
+
+```shell
+mise tasks add pre-commit --depends "test" --depends "render" -- echo pre-commit
+```
+
+This adds to `mise.toml`:
+
+```toml mise.toml
+[tasks.pre-commit]
+depends = ["test", "render"]
+run = "echo pre-commit"
+```
+
+## Task fields
+
+### `run`
+
+The command or commands to execute. Commands in an array run in series — if one fails, the rest are skipped.
+
+```toml mise.toml
+[tasks.test]
+run = [
+    'cargo test',
+    './scripts/test-e2e.sh',
+]
+```
+
+Extra arguments passed to `mise run` are forwarded to the last command in the array.
+
+For Windows-specific commands, use `run_windows`:
+
+```toml mise.toml
+[tasks.test]
+run = 'cargo test'
+run_windows = 'cargo test --features windows'
+```
+
+You can also mix scripts with task references, and pass optional `args` and `env` to referenced tasks:
+
+```toml mise.toml
+[tasks.grouped]
+run = [
+  { task = "t1" },
+  { task = "build", args = ["--release"], env = { RUSTFLAGS = "-C opt-level=3" } },
+  { tasks = ["t2", "t3"] },  # run t2 and t3 in parallel
+  "echo end",
+]
+```
+
+### `description` and `alias`
+
+```toml mise.toml
+[tasks.build]
+description = 'Build the CLI'
+run = "cargo build"
+alias = 'b'  # run with `mise run b`
+```
+
+The description appears in `mise tasks` output and `mise run` with no arguments.
+
+### `depends`
+
+Tasks that must complete before this task runs. Mise resolves the full dependency graph and runs tasks in parallel when possible.
+
+```toml mise.toml
+[tasks.build]
+run = 'cargo build'
+
+[tasks.test]
+depends = ['build']
+run = 'cargo test'
+
+[tasks.ci]
+depends = ['build', 'lint', 'test']
+```
+
+Pass arguments and env vars to specific dependencies:
+
+```toml mise.toml
+[tasks.deploy]
+depends = [
+  { task = "build", args = ["--release"], env = { RUSTFLAGS = "-C opt-level=3" } }
+]
+run = "./deploy.sh"
+```
+
+Forward parent task arguments to dependencies using `{{usage.*}}` templates:
+
+```toml mise.toml
+[tasks.build]
+usage = 'arg "<app>"'
+run = 'echo "building {{usage.app}}"'
+
+[tasks.deploy]
+usage = 'arg "<app>"'
+depends = [{ task = "build", args = ["{{usage.app}}"] }]
+run = 'echo "deploying {{usage.app}}"'
+```
+
+### `depends_post`
+
+Like `depends`, but runs _after_ the task completes:
+
+```toml mise.toml
+[tasks.lint]
+run = "eslint ."
+depends_post = ["postlint"]
+
+[tasks.postlint]
+run = "echo 'linting complete'"
+```
+
+### `wait_for`
+
+Optional dependencies — if these tasks are already running, wait for them to finish before starting. Unlike `depends`, they are not added to the run list.
+
+```toml mise.toml
+[tasks.lint]
+wait_for = ["render"]
+run = "eslint ."
+```
+
+### `env`
+
+Environment variables for this task only. These are not passed to `depends` tasks.
+
+```toml mise.toml
+[tasks.lint]
+description = 'Lint with clippy'
+env = { RUST_BACKTRACE = '1' }
+run = '''
+#!/usr/bin/env bash
+cargo clippy
+'''
+```
+
+### `dir`
+
+The working directory for the task. Defaults to `config_root` (the project root containing `mise.toml`).
+
+```toml mise.toml
+[tasks.test]
+dir = "{{cwd}}"
+run = "cargo test"
+```
+
+### `sources` and `outputs`
+
+Skip the task when outputs are newer than sources. Mise compares last-modified timestamps.
+
+```toml mise.toml
+[tasks.build]
+description = 'Build the CLI'
+run = "cargo build"
+sources = ['Cargo.toml', 'src/**/*.rs']
+outputs = ['target/debug/mycli']
+```
+
+Use `outputs = { auto = true }` (the default when `sources` is defined) to have mise track an internal hash-based file instead of specifying output files manually:
+
+```toml mise.toml
+[tasks.build]
+run = "cargo build"
+sources = ["Cargo.toml", "src/**/*.rs"]
+outputs = { auto = true }
+```
+
+### `hide` and `quiet`
+
+```toml mise.toml
+[tasks.internal]
+hide = true          # exclude from `mise tasks` output
+run = "echo my internal task"
+
+[tasks.build]
+quiet = true         # suppress mise's own output (e.g., "[build] $ cargo build")
+run = "cargo build"
+```
+
+### `raw` and `interactive`
+
+```toml mise.toml
+[tasks.repl]
+raw = true           # connect stdin/stdout/stderr directly; prevents parallel execution
+run = "node"
+
+[tasks.prompt]
+interactive = true   # like raw, but only blocks other interactive tasks
+run = "./scripts/setup.sh"
+```
+
+### `confirm`
+
+Show a confirmation prompt before the task's own `run` executes:
+
+```toml mise.toml
+[tasks.release]
+confirm = 'Are you sure you want to cut a new release?'
+description = 'Cut a new release'
+file = 'scripts/release.sh'
+```
+
+<Warning>
+  `confirm` only guards the task's own `run`. Dependencies listed in `depends` run before the confirmation prompt. If you need confirmation before dependencies, add `confirm` to those tasks or use `run = [{ task = "..." }]` instead of `depends`.
+</Warning>
+
+### `tools`
+
+Override tool versions for a specific task:
+
+```toml mise.toml
+[tasks.build]
+tools.rust = "1.50.0"
+run = "cargo build"
+```
+
+## Specifying the shell
+
+Tasks run with `sh -c` by default (or `cmd /c` on Windows), with `set -e` enabled for `sh`, `bash`, and `zsh`. Use a shebang to specify a different interpreter:
+
+```toml mise.toml
+[tasks.lint]
+run = '''
+#!/usr/bin/env bash
+cargo clippy
+'''
+```
+
+Or set the `shell` property:
+
+```toml mise.toml
+[tasks.lint]
+shell = 'bash -c'
+run = "cargo clippy"
+```
+
+You can use other runtimes via shebangs:
+
+<CodeGroup>
+
+```toml python
+[tools]
+python = 'latest'
+
+[tasks.python_task]
+run = '''
+#!/usr/bin/env python
+for i in range(10):
+    print(i)
+'''
+```
+
+```toml node
+[tools]
+node = 'lts'
+
+[tasks.node_task]
+shell = 'node -e'
+run = [
+  "console.log('First line')",
+  "console.log('Second line')",
+]
+```
+
+```toml deno
+[tools]
+deno = 'latest'
+
+[tasks.deno_task]
+description = "A more complex task using Deno imports"
+run = '''
+#!/usr/bin/env -S deno run
+import ProgressBar from "jsr:@deno-library/progress";
+import { delay } from "jsr:@std/async";
+
+if (!confirm('Start download?')) {
+    Deno.exit(1);
+}
+
+const progress = new ProgressBar({ title:  "downloading:", total: 100 });
+let completed = 0;
+async function download() {
+  while (completed <= 100) {
+    await progress.render(completed++);
+    await delay(10);
+  }
+}
+await download();
+'''
+```
+
+```toml ruby
+[tools]
+ruby = 'latest'
+
+[tasks.ruby_task]
+run = '''
+#!/usr/bin/env ruby
+puts 'Hello, ruby!'
+'''
+```
+
+</CodeGroup>
+
+## Running an external file
+
+Point a task at a script file instead of inlining the command:
+
+```toml mise.toml
+[tasks.release]
+description = 'Cut a new release'
+file = 'scripts/release.sh'
+```
+
+Remote files are also supported via HTTP or Git:
+
+<CodeGroup>
+
+```toml HTTP
+[tasks.build]
+file = "https://example.com/build.sh"
+```
+
+```toml Git (SSH)
+[tasks.build]
+file = "git::ssh://git@github.com/myorg/example.git//myfile?ref=v1.0.0"
+```
+
+```toml Git (HTTPS)
+[tasks.build]
+file = "git::https://github.com/myorg/example.git//myfile?ref=v1.0.0"
+```
+
+</CodeGroup>
+
+Remote files are cached in `MISE_CACHE_DIR`. Clear the cache with `mise cache clear`, or disable caching with `MISE_TASK_REMOTE_NO_CACHE=true`.
+
+## Task arguments
+
+The recommended way to define task arguments is the `usage` field:
+
+```toml mise.toml
+[tasks.test]
+usage = '''
+arg "<file>" help="Test file to run" default="all"
+flag "--format <format>" help="Output format" default="text"
+flag "-v --verbose" help="Enable verbose output"
+'''
+run = 'cargo test ${usage_file?} --format ${usage_format?}'
+```
+
+Arguments become environment variables prefixed with `usage_`. Use bash parameter expansion to access them safely:
+
+| Syntax | Use case |
+| --- | --- |
+| `${usage_var?}` | Args or flags with a default in the usage spec |
+| `${usage_var:-false}` | Boolean flags without a default |
+| `${usage_var:?}` | Required args — error if empty |
+| `${usage_var:+--flag}` | Pass a flag only when the variable is set |
+
+**Help output** is generated automatically:
+
+```shell
+$ mise run test --help
+Usage: test <file> [OPTIONS]
+
+Arguments:
+  <file>  Test file to run [default: all]
+
+Options:
+  --format <format>  Output format [default: text]
+  -v, --verbose      Enable verbose output
+  -h, --help         Print help
+```
+
+## Vars
+
+Vars are shared values available across tasks but not passed as environment variables to scripts. Define them in `[vars]`:
+
+```toml mise.toml
+[vars]
+e2e_args = '--headless'
+
+[tasks.test]
+run = './scripts/test-e2e.sh {{vars.e2e_args}}'
+```
+
+Tasks can override vars locally:
+
+```toml mise.toml
+[tasks.test]
+vars = { e2e_args = "--headed" }
+run = './scripts/test-e2e.sh {{vars.e2e_args}}'
+```

@@ -1,0 +1,62 @@
+---
+title: "mise doctor"
+description: "Check your mise installation for configuration problems and display diagnostic information."
+sidebarTitle: "doctor"
+---
+
+**Usage:** `mise doctor [-J --json]`
+
+**Alias:** `dr`
+
+Run diagnostic checks on your mise installation. Identifies common issues like missing plugins, `PATH` problems, shell configuration errors, and outdated versions.
+
+Always run `mise doctor` first when troubleshooting.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-J, --json` | Output diagnostics in JSON format |
+
+## Subcommands
+
+### `mise doctor path`
+
+```bash
+mise doctor path [-f --full]
+```
+
+Display the current `PATH` as seen by mise, one entry per line. Use `--full` to show additional path details.
+
+```bash
+mise doctor path
+mise doctor path --full
+```
+
+## Examples
+
+```bash
+# Run all checks
+mise doctor
+
+# JSON output for scripting
+mise doctor --json
+
+# Check PATH configuration
+mise doctor path
+```
+
+## Example output
+
+```
+mise doctor
+[OK] mise version: 2026.4.5
+[OK] shell: zsh
+[OK] mise shims dir: /home/user/.local/share/mise/shims
+[WARN] plugin node is not installed
+[OK] config files loaded: /home/user/project/mise.toml
+```
+
+<Tip>
+When filing a bug report, always include the output of `mise doctor`. It provides essential information about your environment.
+</Tip>

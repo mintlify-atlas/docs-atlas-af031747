@@ -1,0 +1,119 @@
+---
+title: "Hooks"
+description: "Automatically execute scripts on directory changes, tool installation, and other mise lifecycle events."
+---
+
+Hooks let you automatically run scripts when mise lifecycle events occur. Configure them in `mise.toml` under the `[hooks]` section.
+
+<Note>
+Most hooks require `mise activate` to be installed in your shell. The `preinstall` and `postinstall` hooks are exceptions and work without activation.
+</Note>
+
+## Hook types
+
+### `enter`
+
+Runs once when you enter a project directory (not on subsequent `cd` within the project):
+
+```toml mise.toml
+[hooks]
+enter = "echo 'Welcome to the project!'"
+```
+
+### `leave`
+
+Runs when you leave the project directory:
+
+```toml mise.toml
+[hooks]
+leave = "echo 'Leaving the project'"
+```
+
+### `cd`
+
+Runs every time the directory changes, including within the project:
+
+```toml mise.toml
+[hooks]
+cd = "echo 'Directory changed'"
+```
+
+### `preinstall`
+
+Runs before tools are installed. Works without `mise activate`:
+
+```toml mise.toml
+[hooks]
+preinstall = "echo 'About to install tools'"
+```
+
+### `postinstall`
+
+Runs after tools are installed. Receives `MISE_INSTALLED_TOOLS` as a JSON array:
+
+```toml mise.toml
+[hooks]
+postinstall = '''
+echo "Installed: $MISE_INSTALLED_TOOLS"
+# Output: [{"name":"node","version":"22.0.0"},{"name":"python","version":"3.12.0"}]
+'''
+```
+
+## Per-tool postinstall
+
+Individual tools can define postinstall scripts that run immediately after that tool is installed:
+
+```toml mise.toml
+[tools]
+node = { version = "22", postinstall = "npm install -g pnpm" }
+python = { version = "3.12", postinstall = "pip install pipx" }
+```
+
+Tool postinstall scripts receive:
+- `MISE_TOOL_NAME` — tool name (e.g., `node`)
+- `MISE_TOOL_VERSION` — installed version (e.g., `22.3.0`)
+- `MISE_TOOL_INSTALL_PATH` — install directory path
+
+## Using tasks as hooks
+
+Instead of inline shell scripts, reference a mise task:
+
+```toml mise.toml
+[tasks.setup]
+run = "npm install"
+description = "Install project dependencies"
+
+[hooks]
+enter = { task = "setup" }
+```
+
+## Multi-line hooks
+
+Use TOML multi-line strings for complex hook scripts:
+
+```toml mise.toml
+[hooks]
+enter = '''
+  echo "Entering project: $(basename $PWD)"
+  if [ ! -d node_modules ]; then
+    echo "Running npm install..."
+    npm install
+  fi
+'''
+```
+
+## Example: auto-install dependencies
+
+```toml mise.toml
+[tools]
+node = "22"
+
+[hooks]
+enter = '''
+  if [ -f package.json ] && [ ! -d node_modules ]; then
+    npm install
+  fi
+'''
+
+postinstall = "echo 'Tools ready: $MISE_INSTALLED_TOOLS'"
+```

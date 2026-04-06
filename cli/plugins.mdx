@@ -1,0 +1,118 @@
+---
+title: "mise plugins"
+description: "Manage mise plugins for extending tool support."
+sidebarTitle: "plugins"
+---
+
+**Usage:** `mise plugins [FLAGS] <SUBCOMMAND>`
+
+**Alias:** `p`
+
+Manage plugins that extend mise with support for additional tools.
+
+<Note>
+For most tools, plugins are no longer needed — use the [aqua](/dev-tools/backends) or [github](/dev-tools/backends) backends instead. See [Plugins guide](/guides/plugins) for when to use plugins.
+</Note>
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-c, --core` | Include built-in core plugins (normally hidden) |
+| `-u, --urls` | Show the git URL for each plugin |
+| `--user` | List user-installed plugins (default behavior) |
+
+## Subcommands
+
+### `mise plugins install`
+
+```bash
+mise plugins install <NAME> [GIT_URL]
+```
+
+Install a plugin by name (from the registry) or by providing a git URL:
+
+```bash
+# Install from registry
+mise plugins install node
+
+# Install from a git URL
+mise plugins install java https://github.com/halcyon/asdf-java.git
+```
+
+### `mise plugins ls`
+
+```bash
+mise plugins ls [--outdated] [--urls]
+```
+
+List installed plugins. Use `--urls` to show source URLs.
+
+```bash
+mise plugins ls
+mise plugins ls --urls
+```
+
+### `mise plugins ls-remote`
+
+```bash
+mise plugins ls-remote [--urls] [--only-names]
+```
+
+List all plugins available in the remote registry.
+
+### `mise plugins update`
+
+```bash
+mise plugins update [PLUGIN]…
+```
+
+Update installed plugins to their latest versions:
+
+```bash
+mise plugins update           # update all
+mise plugins update node      # update specific plugin
+```
+
+### `mise plugins uninstall`
+
+```bash
+mise plugins uninstall [PLUGIN]…
+```
+
+Remove installed plugins:
+
+```bash
+mise plugins uninstall node
+```
+
+### `mise plugins link`
+
+```bash
+mise plugins link <NAME> [DIR]
+```
+
+Link a local plugin directory for development:
+
+```bash
+mise plugins link my-plugin ~/dev/mise-plugin-my-plugin
+```
+
+## Examples
+
+```bash
+# List installed plugins
+mise plugins ls
+
+# Install a plugin from registry
+mise plugins install java https://github.com/halcyon/asdf-java.git
+
+# Use the installed tool
+mise use java@21
+
+# Update all plugins
+mise plugins update
+
+# Show remote plugin list
+mise plugins ls-remote | head -20
+```

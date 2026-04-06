@@ -1,0 +1,80 @@
+---
+title: "mise run"
+description: "Run project tasks defined in mise.toml or as shell scripts."
+sidebarTitle: "run"
+---
+
+**Usage:** `mise run [FLAGS] [TASK] [ARGS]…`
+
+**Alias:** `r`
+
+Run one or more tasks defined in `mise.toml` or as standalone scripts. Tasks may have dependencies, source file checks, and parallel execution.
+
+See [Running Tasks](/tasks/running-tasks) for a full guide.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-c, --continue-on-error` | Continue running tasks even if one fails |
+| `-C, --cd <CD>` | Change to this directory before executing |
+| `-f, --force` | Run even if outputs are up to date |
+| `-j, --jobs <JOBS>` | Number of tasks to run in parallel (default: 4) |
+| `-n, --dry-run` | Print tasks in execution order without running them |
+| `-r, --raw` | Connect stdin/stdout/stderr directly to task processes; sets `--jobs=1` |
+| `--timings` | Show elapsed time for each task |
+| `--no-timings` | Hide elapsed time |
+| `--interleave` | Print stdout/stderr directly without line-prefix buffering |
+| `--output <OUTPUT>` | Output mode: `prefix`, `interleave` |
+| `--shell <SHELL>` | Shell to use for running tasks |
+
+## Examples
+
+```bash
+# Run a single task
+mise run build
+mise r build           # shorter alias
+
+# Run with arguments
+mise run test -- --nocapture
+mise run build --release
+
+# Run multiple tasks in sequence with different args
+mise run build arg1 ::: test arg2
+
+# Run in parallel with 8 jobs
+mise run --jobs 8 lint test
+
+# Dry run — see what would execute
+mise run --dry-run test
+
+# Force re-run even if outputs are fresh
+mise run --force build
+
+# Continue past failures
+mise run --continue-on-error lint test build
+```
+
+## Task definition
+
+Define tasks in `mise.toml`:
+
+```toml mise.toml
+[tasks.build]
+run = "cargo build"
+description = "Build the project"
+
+[tasks.test]
+run = "cargo test"
+depends = ["build"]
+sources = ["src/**/*.rs"]
+outputs = ["target/debug/myapp"]
+```
+
+Or as files in `mise-tasks/`, `.mise/tasks/`, `mise/tasks/`:
+
+```bash mise-tasks/build
+#!/usr/bin/env bash
+#MISE description="Build the project"
+cargo build
+```

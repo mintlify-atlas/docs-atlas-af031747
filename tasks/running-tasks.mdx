@@ -1,0 +1,144 @@
+---
+title: "Running Tasks"
+description: "Run mise tasks from the command line with parallel execution, file watching, and dependency ordering."
+---
+
+## Running a task
+
+Run a task with `mise run <task>` (or `mise r <task>`):
+
+```bash
+mise run build
+mise run test
+mise r lint   # shorter alias
+```
+
+You can also run tasks directly if the name doesn't conflict with a mise command:
+
+```bash
+mise build
+```
+
+<Note>
+Prefer `mise run <task>` in scripts and documentation — mise may add built-in commands in the future that shadow task names.
+</Note>
+
+## Passing arguments
+
+Extra arguments after the task name are passed to the task script:
+
+```bash
+mise run build --release
+mise run test -- --nocapture
+```
+
+If a task has multiple `run` commands, arguments are only passed to the last command.
+
+## Running multiple tasks
+
+Run multiple tasks in one command using the `:::` delimiter:
+
+```bash
+mise run build arg1 arg2 ::: test arg3 arg4
+```
+
+## Parallel execution
+
+By default, mise runs up to 4 tasks in parallel. Configure with `--jobs`, the `jobs` setting, or `MISE_JOBS`:
+
+```bash
+mise run --jobs 8 build test lint
+MISE_JOBS=8 mise run build
+```
+
+Output is printed line-by-line with a task label prefix to avoid interleaving. Use `--interleave` to print stdout/stderr directly:
+
+```bash
+mise run --interleave build
+```
+
+## Dry run
+
+See what would run without executing:
+
+```bash
+mise run --dry-run build test
+```
+
+## Task dependencies and ordering
+
+Define task dependencies in `mise.toml`:
+
+```toml mise.toml
+[tasks.build]
+run = "cargo build"
+
+[tasks.test]
+run = "cargo test"
+depends = ["build"]
+```
+
+`test` will always run after `build` completes.
+
+## Task groups and wildcards
+
+Group tasks with `:` prefixes and use glob patterns:
+
+```bash
+# Run all lint tasks
+mise run lint:*
+
+# Run all test tasks including nested
+mise run test:**:local
+```
+
+Available wildcard patterns:
+- `?` — any single character
+- `*` — 0 or more characters
+- `**` — 0 or more groups
+- `{a,b}` — matches any listed pattern
+
+## File change detection
+
+Skip tasks when outputs are up to date:
+
+```toml mise.toml
+[tasks.build]
+run = "cargo build"
+sources = ["Cargo.toml", "src/**/*.rs"]
+outputs = ["target/debug/myapp"]
+```
+
+If `target/debug/myapp` is newer than all source files, the task is skipped. Use `--force` to override:
+
+```bash
+mise run --force build
+```
+
+## Watching files
+
+Re-run a task automatically when sources change using `mise watch`:
+
+```bash
+mise watch build
+```
+
+<Note>
+`mise watch` uses `watchexec` under the hood. Install it with `mise use -g watchexec@latest`.
+</Note>
+
+## Default task
+
+If a task named `default` is defined, it runs when no task is specified:
+
+```bash
+mise run
+```
+
+## Listing available tasks
+
+```bash
+mise tasks
+mise tasks --hidden   # include tasks with hide=true
+mise tasks deps build # show dependencies of a task
+```

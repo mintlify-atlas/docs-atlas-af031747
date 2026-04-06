@@ -1,0 +1,79 @@
+---
+title: "Introduction"
+description: "Mise is a dev tools manager, environment manager, and task runner — all in one fast Rust binary."
+---
+
+Mise (mise-en-place) is the front-end to your dev environment. It replaces version managers like `nvm`, `pyenv`, and `rbenv`; environment tools like `direnv`; and task runners like `make` — unified into a single configuration file.
+
+## What mise does
+
+<CardGroup cols={3}>
+  <Card title="Dev tools manager" icon="code-branch">
+    Like [asdf](https://asdf-vm.com) — manage multiple versions of Node, Python, Go, Ruby, and [hundreds more](/dev-tools/overview). Tools are pinned per project and installed automatically.
+  </Card>
+  <Card title="Environment manager" icon="leaf">
+    Like [direnv](https://github.com/direnv/direnv) — define environment variables in `mise.toml` and they load automatically when you enter a project directory.
+  </Card>
+  <Card title="Task runner" icon="play">
+    Like [make](https://www.gnu.org/software/make/manual/make.html) — define tasks in `mise.toml` or as shell scripts, with dependency resolution and parallel execution.
+  </Card>
+</CardGroup>
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Getting started" icon="rocket" href="/getting-started">
+    Install mise and run your first tools in minutes.
+  </Card>
+  <Card title="Dev tools" icon="wrench" href="/dev-tools/overview">
+    Manage Node, Python, Go, Ruby, and hundreds of other tools.
+  </Card>
+  <Card title="Environments" icon="gear" href="/environments/overview">
+    Load per-project environment variables automatically.
+  </Card>
+  <Card title="Tasks" icon="list-check" href="/tasks/overview">
+    Define and run project tasks with dependency resolution.
+  </Card>
+</CardGroup>
+
+## Key features
+
+- **Single config file** — tools, environment variables, and tasks all live in `mise.toml`
+- **Per-project tool versions** — each project gets its own pinned versions, no conflicts
+- **Multiple backends** — install tools from npm, pipx, cargo, GitHub releases, aqua, and more
+- **Shell integration** — tools and env vars are loaded when you `cd` into a project directory
+- **ASDF compatible** — reads `.tool-versions` files and supports asdf plugins
+- **Fast** — written in Rust; activates in under 10ms
+
+## Example project config
+
+```toml mise.toml
+[tools]
+terraform = "1"
+aws-cli = "2"
+
+[env]
+TF_WORKSPACE = "development"
+AWS_REGION = "us-west-2"
+AWS_PROFILE = "dev"
+
+[tasks.plan]
+description = "Run terraform plan with configured workspace"
+run = """
+terraform init
+terraform workspace select $TF_WORKSPACE
+terraform plan
+"""
+
+[tasks.deploy]
+description = "Deploy infrastructure after validation"
+depends = ["validate", "plan"]
+run = "terraform apply -auto-approve"
+```
+
+Run it with:
+
+```sh
+mise install      # install tools specified in mise.toml
+mise run deploy   # run the deploy task
+```
